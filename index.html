@@ -1163,18 +1163,19 @@ function pullFromCloud(){
       if(x.status!==200){console.log('pullFromCloud status '+x.status);return;}
       try{
         var rows=JSON.parse(x.responseText);
-        if(!rows||!rows.length){console.log('pullFromCloud empty');return;}
+        if(!rows||!rows.length){console.log('pullFromCloud empty');tt('☁️ لا توجد بيانات في السحابة','inf');return;}
         var r=rows[0];
         if(!r||!r.data||!r.date){console.log('pullFromCloud invalid row');return;}
         var local=localStorage.getItem('wpm_last_sync');
         if(local&&r.date<=local){console.log('pullFromCloud no newer');return;}
+        tt('☁️ تم سحب البيانات من السحابة','ok');
         console.log('pullFromCloud got new data from '+r.date);
         localStorage.setItem('wpm_data',JSON.stringify(r.data));
         localStorage.setItem('wpm_last_sync',r.date);
         if(document.querySelector('.leaflet-container'))location.reload();
       }catch(e){console.log('pullFromCloud parse error',e)}
     };
-    x.onerror=function(){console.log('pullFromCloud network error')};
+    x.onerror=function(){console.log('pullFromCloud network error');tt('☁️ فشل الاتصال بالسحابة','err')};
     x.send();
   }catch(e){console.log('pullFromCloud error',e)}
 }
