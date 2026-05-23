@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#1565C0">
-<title>مشتركين المياه</title>
+<title>شركة مياه اليرموك</title>
 <link rel="manifest" href="manifest.json">
 <script>setTimeout(function(){var e=document.getElementById('loading');if(e)e.style.display='none'},1800);</script>
 <style>
@@ -79,13 +79,13 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 <body>
 
 <div id="map"><div id="loading">
-<h2>💧 مشتركين المياه</h2>
+<h2>💧 شركة مياه اليرموك</h2>
 <p>جاري التحميل...</p>
 <p style="font-size:11px;color:#555">يحتاج اتصال إنترنت للخرائط</p>
 </div></div>
 
 <div class="top-bar">
-<div><h1><span style="font-size:20px">💧</span> مشتركين المياه</h1></div>
+<div><h1><span style="font-size:20px">💧</span> شركة مياه اليرموك</h1></div>
 <div style="display:flex;align-items:center;gap:6px">
 <button onclick="mo('searchModal')" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:2px">🔍</button>
 <span class="badge" id="subCount">0</span>
@@ -131,6 +131,7 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 <button class="tool-btn" onclick="ts()"><span>🗺️</span><span class="label">خرائط</span></button>
 <button class="tool-btn green" onclick="pullFromCloud()" title="مزامنة"><span>☁️</span><span class="label">مزامنة</span></button>
 <button class="tool-btn" onclick="location.reload()" title="تحديث"><span>🔄</span><span class="label">تحديث</span></button>
+<button class="tool-btn" onclick="mo('aboutModal')"><span>ℹ️</span><span class="label">عن التطبيق</span></button>
 <button class="tool-btn danger" onclick="mo('clearModal')"><span>🗑️</span><span class="label">مسح</span></button>
 </div>
 
@@ -280,6 +281,31 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 <button class="modal-btn primary" onclick="exportBackup()">📤 تصدير نسخة احتياطية</button>
 <button class="modal-btn secondary" onclick="document.getElementById('backupInput').click()">📥 استيراد نسخة احتياطية</button>
 <button class="modal-btn secondary" onclick="mc('backupModal')">إغلاق</button>
+</div></div>
+
+<!-- About Modal -->
+<div class="modal-overlay" id="aboutModal"><div class="modal" style="text-align:right;direction:rtl">
+<h2>ℹ️ حول التطبيق</h2>
+<div style="font-size:13px;line-height:1.7">
+<p><strong>شركة مياه اليرموك</strong> - نظام معلومات جغرافي متكامل لشبكات المياه والصرف الصحي.</p>
+<p><strong>المزايا:</strong></p>
+<ul style="margin:0;padding-right:18px">
+<li>🗺️ خريطة تفاعلية مع ١١ طبقة (مشتركين، دور ضخ، خزانات، مناهل، شبكة مياه، شبكة صرف، مسارات الجباه، بلاغات صيانة، أحياء)</li>
+<li>➕ إضافة نقاط ومساحات على الخريطة (مشتركين خطوط)</li>
+<li>📸 التقاط صورة وقراءة العداد بالذكاء الاصطناعي (OCR)</li>
+<li>📊 إحصائيات كاملة لجميع العناصر</li>
+<li>📥 استيراد KML / GPX / GeoJSON / CSV / KMZ</li>
+<li>📤 تصدير Excel مع جميع البيانات والصور</li>
+<li>⛰️ قياس الارتفاع عن سطح البحر</li>
+<li>📱 إرسال واتساب لأي نقطة أو خط</li>
+<li>☁️ مزامنة سحابية عبر Supabase</li>
+<li>🏘️ تصفية حسب الحي</li>
+<li>🔍 بحث متقدم في جميع العناصر</li>
+<li>📦 نسخ احتياطي واستعادة</li>
+</ul>
+<p style="margin-top:10px;color:#4fc3f7">👨‍💻 تصميم وبرمجة: <strong>المهندس أسامة الربضي</strong></p>
+</div>
+<button class="modal-btn secondary" onclick="mc('aboutModal')">إغلاق</button>
 </div></div>
 
 <!-- Clear Modal -->
