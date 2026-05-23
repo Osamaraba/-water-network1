@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1565C0">
+<title>مشتركين المياه</title>
+<link rel="manifest" href="manifest.json">
+<script>setTimeout(function(){var e=document.getElementById('loading');if(e)e.style.display='none'},1800);</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;overflow:hidden;height:100dvh;width:100vw}
+#loading{position:fixed;top:0;left:0;right:0;bottom:0;background:#1a1a2e;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center}
+#loading h2{color:#1565C0;margin-bottom:8px;font-size:20px}
+#loading p{color:#888;font-size:13px;margin-bottom:4px}
+#map{position:fixed;top:54px;left:0;right:0;bottom:60px;z-index:0}
+.top-bar{position:fixed;top:0;left:0;right:0;z-index:1000;background:linear-gradient(135deg,#1565C0,#0D47A1);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,.5);height:54px}
+.top-bar h1{font-size:17px;font-weight:700;color:#fff;display:flex;align-items:center;gap:6px}
+.top-bar .badge{background:#FF6F00;color:#fff;font-size:10px;border-radius:12px;padding:2px 10px;min-width:24px;text-align:center}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;z-index:1000;background:rgba(21,21,45,.97);backdrop-filter:blur(10px);border-top:1px solid rgba(255,255,255,.08);padding:4px 0 env(safe-area-inset-bottom,4px);display:flex;justify-content:space-evenly;align-items:center;height:60px}
+.tool-btn{display:flex;flex-direction:column;align-items:center;gap:1px;background:none;border:none;color:#888;font-size:9px;padding:4px 8px;border-radius:8px;cursor:pointer;min-width:40px;transition:.15s;-webkit-tap-highlight-color:transparent}
+.tool-btn span{font-size:20px}
+.tool-btn .label{font-size:9px;color:#888}
+.tool-btn.active span{color:#42A5F5}
+.tool-btn.pump span{color:#FFD54F}
+.tool-btn.green span{color:#66BB6A}
+.tool-btn.danger span{color:#ef5350}
+.indicator{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:999;background:rgba(21,101,192,.95);color:#fff;padding:6px 18px;border-radius:20px;font-size:12px;display:none;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.2);pointer-events:none;white-space:nowrap}
+.indicator.show{display:flex}
+.fab{position:fixed;bottom:68px;right:14px;z-index:999;width:44px;height:44px;border-radius:50%;background:rgba(21,21,45,.9);border:1px solid rgba(255,255,255,.15);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+.fab:active{transform:scale(.92)}
+.pump-mkr{background:none;border:none}
+.pump-mkr>div,.insp-mkr>div,.stop-mkr>div{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;border:3px solid #fff;animation:pulse 2s infinite}
+.pump-mkr>div{background:linear-gradient(135deg,#FFD54F,#FF8F00);box-shadow:0 0 16px rgba(255,215,0,.5)}
+.insp-mkr>div{background:linear-gradient(135deg,#F48FB1,#E91E63);box-shadow:0 0 16px rgba(233,30,99,.5)}
+.stop-mkr>div{background:linear-gradient(135deg,#EF5350,#B71C1C);box-shadow:0 0 16px rgba(239,83,80,.5)}
+.tank-mkr>div{background:linear-gradient(135deg,#4DD0E1,#00838F);box-shadow:0 0 16px rgba(0,188,212,.5);animation:pulseBlue 2s infinite}
+.manhole-mkr>div{background:linear-gradient(135deg,#A1887F,#4E342E);box-shadow:0 0 12px rgba(93,64,55,.5)}
+.comp-mkr>div{background:linear-gradient(135deg,#FF8A65,#BF360C);box-shadow:0 0 12px rgba(255,112,67,.5);animation:pulse-gold 1.5s ease-in-out infinite}
+@keyframes pulseBlue{0%{box-shadow:0 0 0 0 rgba(0,188,212,.5)}50%{box-shadow:0 0 0 10px rgba(0,188,212,0)}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,215,0,.5)}50%{box-shadow:0 0 0 10px rgba(255,215,0,0)}}
+.sub-mkr>div{width:13px;height:13px;background:#42A5F5;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.sub-mkr.sel>div{background:#FF6F00;width:17px;height:17px;border:3px solid #fff;box-shadow:0 0 12px rgba(255,111,0,.6)}
+.neighborhood-label{background:rgba(21,101,192,.85);color:#fff;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:700;border:1px solid rgba(255,255,255,.3);white-space:nowrap}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:2000;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#1e1e3a;border-radius:14px;padding:20px;width:88%;max-width:380px;max-height:80vh;overflow-y:auto;border:1px solid rgba(255,255,255,.08)}
+.modal h2{font-size:17px;margin-bottom:12px;color:#fff;display:flex;align-items:center;gap:8px}
+.modal p{color:#aaa;font-size:13px;margin-bottom:10px}
+.modal label{display:block;font-size:12px;color:#888;margin-bottom:3px;margin-top:10px}
+.modal input,.modal select{width:100%;padding:9px 10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#fff;font-size:13px;outline:none;font-family:inherit}
+.modal input:focus,.modal select:focus{border-color:#42A5F5}
+.modal-btn{width:100%;padding:10px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px;transition:.15s}
+.modal-btn.primary{background:linear-gradient(135deg,#42A5F5,#1565C0);color:#fff}
+.modal-btn.secondary{background:rgba(255,255,255,.08);color:#ccc}
+.modal-btn.success{background:linear-gradient(135deg,#66BB6A,#2E7D32);color:#fff}
+.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:3000;background:rgba(0,0,0,.88);color:#fff;padding:8px 16px;border-radius:8px;font-size:12px;display:none;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.08);pointer-events:none;max-width:80%;text-align:center}
+.toast.show{display:flex}
+#fileInput{display:none}
+.elev-info{font-size:11px;color:#aaa;margin:6px 0;padding:6px;background:rgba(255,255,255,.05);border-radius:6px}
+.elev-info b{color:#FFD54F}
+.search-item{display:flex;align-items:center;justify-content:space-between;padding:10px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:6px;gap:8px}
+.search-item .info{flex:1;min-width:0}
+.search-item .name{color:#fff;font-size:13px;font-weight:600}
+.search-item .detail{color:#888;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-item .wa-btn{background:#25D366;border:none;color:#fff;width:38px;height:38px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.15s}
+.search-item .wa-btn:active{transform:scale(.9)}
+.search-item .loc-btn{background:rgba(66,165,245,.2);border:none;color:#42A5F5;width:38px;height:38px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.15s;margin-left:4px}
+.search-item .loc-btn:active{transform:scale(.9)}
+.search-item .actions{display:flex;gap:4px}
+.wa-popup-btn{display:inline-block;background:#25D366;color:#fff;border:none;border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;margin-top:4px;text-decoration:none}
+.side-panel{position:fixed;top:54px;left:0;bottom:60px;z-index:998;background:rgba(21,21,45,.95);backdrop-filter:blur(8px);border-left:1px solid rgba(255,255,255,.1);width:180px;padding:14px;transform:translateX(100%);transition:transform .25s;overflow-y:auto}
+.side-panel.show{transform:translateX(0)}
+.chk-row{display:flex;align-items:center;justify-content:space-between;padding:8px 4px;cursor:pointer;border-radius:6px;transition:.15s;font-size:13px;color:#ccc}
+.chk-row:hover{background:rgba(255,255,255,.05)}
+.chk-row input{width:18px;height:18px;cursor:pointer;accent-color:#42A5F5}
+</style>
+</head>
+<body>
+
+<div id="map"><div id="loading">
+<h2>💧 مشتركين المياه</h2>
+<p>جاري التحميل...</p>
+<p style="font-size:11px;color:#555">يحتاج اتصال إنترنت للخرائط</p>
+</div></div>
+
+<div class="top-bar">
+<div><h1><span style="font-size:20px">💧</span> مشتركين المياه</h1></div>
+<div style="display:flex;align-items:center;gap:6px">
+<button onclick="mo('searchModal')" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:2px">🔍</button>
+<span class="badge" id="subCount">0</span>
+<span style="color:#90CAF9;font-size:13px" id="usersIcon">👥 0</span>
+</div>
+</div>
+
+<div class="indicator" id="drawIndicator">✏️ اسحب على الخريطة لرسم الحي</div>
+
+<button class="fab" id="fabCenter" onclick="cc()" style="right:14px">📍</button>
+<button class="fab" onclick="locateMe()" style="right:66px;border-color:#42A5F5">🎯</button>
+<button class="fab" onclick="toggleSidePanel()" style="left:14px;right:auto;border-color:#66BB6A;font-size:14px" id="sideToggle">☰</button>
+
+<div class="side-panel" id="sidePanel">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+<b style="font-size:14px">🔍 عرض</b>
+<button onclick="toggleSidePanel()" style="background:none;border:none;color:#888;font-size:18px;cursor:pointer">✕</button>
+</div>
+<label class="chk-row"><span>👥 المشتركين</span><input type="checkbox" id="chkSubs" checked onchange="applyFilters()"></label>
+<label class="chk-row"><span>🏭 دور الضخ</span><input type="checkbox" id="chkPumps" checked onchange="applyFilters()"></label>
+<label class="chk-row"><span>👁️ نظارة</span><input type="checkbox" id="chkInsp" checked onchange="applyFilters()"></label>
+<label class="chk-row"><span>⛔ توقف الضخ</span><input type="checkbox" id="chkStop" checked onchange="applyFilters()"></label>
+<label class="chk-row"><span>🚰 خزانات المياه</span><input type="checkbox" id="chkTanks" checked onchange="applyFilters()"></label>
+<label class="chk-row"><span>🕳️ مناهل صرف صحي</span><input type="checkbox" id="chkManholes" checked onchange="applyFilters()"></label>
+<label class="chk-row"><span>🔵 شبكة المياه</span><input type="checkbox" id="chkWaterlines" checked onchange="applyFilters()"></label>
+<label class="chk-row"><span>🟤 شبكة الصرف الصحي</span><input type="checkbox" id="chkSewerlines" checked onchange="applyFilters()"></label>
+<label class="chk-row"><span>🟣 مسارات الجباه</span><input type="checkbox" id="chkGravity" checked onchange="applyFilters()"></label>
+<label class="chk-row"><span>📋 بلاغات الصيانة</span><input type="checkbox" id="chkComplaints" checked onchange="applyFilters()"></label>
+<label class="chk-row"><span>🏘️ الأحياء</span><input type="checkbox" id="chkHoods" checked onchange="applyFilters()"></label>
+<label style="margin-top:8px;text-align:center"><button class="modal-btn primary" style="padding:6px;font-size:12px" onclick="showStats()">📊 إحصاء الشبكة</button></label>
+<label style="margin-top:4px;text-align:center"><button class="modal-btn" style="padding:6px;font-size:12px;background:#FF7043" onclick="mo('complaintModal')">📋 إضافة بلاغ صيانة</button></label>
+</div>
+
+<div class="bottom-bar">
+<button class="tool-btn" onclick="mo('importModal')"><span>📥</span><span class="label">استيراد</span></button>
+<button class="tool-btn" id="btnDraw" onclick="td()"><span>✏️</span><span class="label">رسم</span></button>
+<button class="tool-btn pump" id="btnPumps" onclick="tp()"><span>🏭</span><span class="label">المواقع</span></button>
+<button class="tool-btn" onclick="mo('neighborhoodsModal')"><span>🏘️</span><span class="label">الأحياء</span></button>
+<button class="tool-btn green" onclick="ex()"><span>📊</span><span class="label">Excel</span></button>
+<button class="tool-btn" onclick="fe()"><span>🏔️</span><span class="label">ارتفاعات</span></button>
+<button class="tool-btn" onclick="mo('backupModal')"><span>💾</span><span class="label">حفظ</span></button>
+<button class="tool-btn" onclick="ts()"><span>🗺️</span><span class="label">خرائط</span></button>
+<button class="tool-btn green" onclick="pullFromCloud()" title="مزامنة"><span>☁️</span><span class="label">مزامنة</span></button>
+<button class="tool-btn" onclick="location.reload()" title="تحديث"><span>🔄</span><span class="label">تحديث</span></button>
+<button class="tool-btn danger" onclick="ca()"><span>🗑️</span><span class="label">مسح</span></button>
+</div>
+
+<input type="file" id="fileInput" multiple onchange="hf(this.files)">
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="importModal"><div class="modal">
+<h2>📥 استيراد</h2>
+<p>اختر ملف KML/KMZ/GPX/CSV من التطبيق الأصلي</p>
+<label>نوع البيانات</label>
+<select id="importType">
+<option value="auto">تلقائي</option>
+<option value="subscribers">👥 مشتركين</option>
+<option value="pumps">🏭 دور ضخ مياه</option>
+<option value="inspection">👁️ نظارة / انظار</option>
+<option value="pumpstop">⛔ توقف الضخ</option>
+<option value="tank">🚰 خزان مياه</option>
+<option value="manhole">🕳️ منهول صرف صحي</option>
+<option value="waterline">🔵 خط مياه (شبكة)</option>
+<option value="sewerline">🟤 خط صرف صحي</option>
+<option value="gravityline">🟣 مسارات الجباه (جابية)</option>
+</select>
+<button class="modal-btn secondary" onclick="document.getElementById('fileInput').click();mc('importModal')">📂 اختيار ملف</button>
+<button class="modal-btn primary" onclick="sd();mc('importModal')">🔄 بيانات تجريبية</button>
+<button class="modal-btn secondary" onclick="mc('importModal')">إلغاء</button>
+</div></div>
+
+<!-- Export Modal -->
+<div class="modal-overlay" id="exportModal"><div class="modal">
+<h2>📊 تصدير Excel</h2>
+<p id="exportInfo"></p>
+<label>البيانات</label>
+<select id="exportType">
+<option value="inside">المشتركين داخل التحديد فقط</option>
+<option value="all">جميع المشتركين</option>
+<option value="pumps">🏭 دور ضخ مياه</option>
+<option value="inspection">👁️ نظارة / انظار</option>
+<option value="pumpstop">⛔ توقف الضخ</option>
+<option value="tank">🚰 خزانات مياه</option>
+<option value="manhole">🕳️ مناهل صرف صحي</option>
+<option value="waterline">🔵 شبكة مياه</option>
+<option value="sewerline">🟤 شبكة صرف صحي</option>
+<option value="gravityline">🟣 مسارات الجباه</option>
+<option value="complaint">📋 بلاغات صيانة</option>
+</select>
+<button class="modal-btn primary" onclick="de()">📥 تصدير</button>
+<button class="modal-btn secondary" onclick="mc('exportModal')">إلغاء</button>
+</div></div>
+
+<!-- Complaint Modal -->
+<div class="modal-overlay" id="complaintModal"><div class="modal">
+<h2>📋 إضافة بلاغ صيانة من واتساب</h2>
+<p style="color:#aaa;font-size:12px;margin-bottom:10px">انسخ رابط خرائط Google من واتساب والصقه أدناه، أو أدخل الإحداثيات يدوياً</p>
+<label>رابط خرائط Google أو إحداثيات</label>
+<input type="text" id="compCoordInput" placeholder="مثال: https://maps.google.com/maps?q=32.34,35.74 أو 32.34,35.74" style="direction:ltr;text-align:left">
+<button class="modal-btn" onclick="useMapCenter()" style="background:#37474F;font-size:12px;margin-top:4px">📍 استخدام مركز الخريطة الحالي</button>
+<label>وصف البلاغ (اختياري)</label>
+<textarea id="compDesc" rows="3" placeholder="مثال: عطل في خط المياه عند هذا الموقع"></textarea>
+<div style="display:flex;gap:8px;margin-top:12px">
+<button class="modal-btn primary" onclick="addComplaint()">📋 إضافة بلاغ</button>
+<button class="modal-btn secondary" onclick="mc('complaintModal')">إلغاء</button>
+</div>
+</div></div>
+
+<!-- Name Neighborhood Modal -->
+<div class="modal-overlay" id="nameModal"><div class="modal">
+<h2>🏘️ تسمية الحي</h2>
+<label>القرية / المنطقة</label>
+<select id="hoodVillage">
+<option value="">--- اختر القرية ---</option>
+<option value="عجلون">عجلون</option>
+<option value="عنجرة">عنجرة</option>
+<option value="صخرة">صخرة</option>
+<option value="عبين">عبين</option>
+<option value="عين جنا">عين جنا</option>
+<option value="كفرنجة">كفرنجة</option>
+<option value="راجب">راجب</option>
+<option value="حلاوة">حلاوة</option>
+<option value="وادي الريان">وادي الريان</option>
+<option value="إصفت">إصفت</option>
+<option value="بسطة">بسطة</option>
+<option value="أخرى">أخرى</option>
+</select>
+<label>اسم الحي</label>
+<input type="text" id="hoodName" placeholder="مثال: حي البلد">
+<label>لون التحديد</label>
+<select id="hoodColor">
+<option value="#3366FF">أزرق</option>
+<option value="#FF6F00">برتقالي</option>
+<option value="#4CAF50">أخضر</option>
+<option value="#E53935">أحمر</option>
+<option value="#9C27B0">بنفسجي</option>
+</select>
+<button class="modal-btn success" onclick="sn()">💾 حفظ</button>
+<button class="modal-btn secondary" onclick="can()">إلغاء</button>
+</div></div>
+
+<!-- Neighborhoods List Modal -->
+<div class="modal-overlay" id="neighborhoodsModal"><div class="modal">
+<h2>🏘️ الأحياء المحددة</h2>
+<div id="hoodsList" style="max-height:250px;overflow-y:auto"></div>
+<p style="color:#888;font-size:11px;margin-top:8px" id="hoodsTotal"></p>
+<button class="modal-btn primary" onclick="exportAllHoods()" style="font-size:13px;padding:6px 12px">📦 تصدير كل حي كملف</button>
+<button class="modal-btn primary" onclick="document.getElementById('hoodImportInput').click()" style="font-size:13px;padding:6px 12px;background:#26A69A">📥 استيراد أحياء</button>
+<input type="file" id="hoodImportInput" accept=".json" multiple style="display:none" onchange="importHoodFiles(this.files)">
+<button class="modal-btn secondary" onclick="mc('neighborhoodsModal')" style="margin-top:6px">إغلاق</button>
+</div></div>
+
+<!-- Search Modal -->
+<div class="modal-overlay" id="searchModal"><div class="modal">
+<h2>🔍 بحث عن مشترك</h2>
+<input type="text" id="searchInput" placeholder="اسم المشترك..." oninput="searchSubs(this.value)" style="margin-bottom:10px">
+<div id="searchResults" style="max-height:350px;overflow-y:auto"></div>
+<button class="modal-btn secondary" onclick="mc('searchModal')">إغلاق</button>
+</div></div>
+
+<!-- Stats Modal -->
+<div class="modal-overlay" id="statsModal"><div class="modal">
+<h2>📊 إحصاء الشبكة</h2>
+<div id="statsContent" style="max-height:400px;overflow-y:auto;font-size:13px"></div>
+<button class="modal-btn secondary" onclick="mc('statsModal')">إغلاق</button>
+</div></div>
+
+<!-- Backup Modal -->
+<div class="modal-overlay" id="backupModal"><div class="modal">
+<h2>💾 حفظ واسترجاع</h2>
+<p style="color:#aaa;font-size:12px">البيانات محفوظة تلقائياً في الجهاز</p>
+<button class="modal-btn primary" onclick="exportBackup()">📤 تصدير نسخة احتياطية</button>
+<button class="modal-btn secondary" onclick="document.getElementById('backupInput').click()">📥 استيراد نسخة احتياطية</button>
+<button class="modal-btn secondary" onclick="mc('backupModal')">إغلاق</button>
+</div></div>
+<input type="file" id="backupInput" accept=".json" style="display:none" onchange="importBackup(this.files)">
+
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+// Hide loading
+function hidel(){var e=document.getElementById('loading');if(e)e.style.display='none'}
+// Load Leaflet CSS async
+(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(l)})();
+
+// ===== STATE =====
+var subs=[],pumps=[],hoods=[],tanks=[],manholes=[],waterlines=[],sewerlines=[],gravitylines=[],complaints=[];
+var SL,PL,IL,KL,TL,MHL,WTL,STL,GTL,CL,DI,MI;
+var drawMode=false,pumpVis=true;
+var pendingLayer=null; // holds the drawn polygon until name is given
+
+// ===== MAP INIT =====
+MI=L.map('map',{center:[32.3499,35.7483],zoom:13,zoomControl:false,attributionControl:false});
+var tileSources=[
+  {name:'تضاريس ESRI',url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',maxZoom:19,attr:'ESRI Topo'},
+  {name:'شارع',url:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',maxZoom:19,attr:'© <a href=\"https://carto.com/\">CARTO</a>'},
+  {name:'أقمار',url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',maxZoom:19,attr:'ESRI'}
+];
+var tileIdx=0,curTile=null;
+function loadTile(i){
+  if(curTile)MI.removeLayer(curTile);
+  var s=tileSources[i];
+  curTile=L.tileLayer(s.url,{maxZoom:s.maxZoom,attribution:s.attr}).addTo(MI);
+  tileIdx=i;
+}
+loadTile(0);
+L.control.zoom({position:'bottomright'}).addTo(MI);
+SL=L.layerGroup().addTo(MI);
+PL=L.layerGroup().addTo(MI);
+IL=L.layerGroup().addTo(MI);
+KL=L.layerGroup().addTo(MI);
+TL=L.layerGroup().addTo(MI);
+MHL=L.layerGroup().addTo(MI);
+WTL=L.layerGroup().addTo(MI);
+STL=L.layerGroup().addTo(MI);
+GTL=L.layerGroup().addTo(MI);
+CL=L.layerGroup().addTo(MI);
+DI=L.featureGroup().addTo(MI);
+loadDraw();
+hidel();
+
+// ===== LOAD LEAFLET.DRAW =====
+function loadDraw(){
+  var ls=document.createElement('link');
+  ls.rel='stylesheet';ls.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css';
+  document.head.appendChild(ls);
+  var s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js';
+  s.onload=function(){
+    if(!L.Control.Draw)return;
+    var dc=new L.Control.Draw({
+      position:'topleft',
+      draw:{
+        polygon:{shapeOptions:{color:'#3366FF',fillColor:'rgba(51,102,255,0.12)',fillOpacity:0.2,weight:3,className:'drawn-poly'}},
+        rectangle:{shapeOptions:{color:'#3366FF',fillColor:'rgba(51,102,255,0.12)',fillOpacity:0.2,weight:3}},
+        circle:{shapeOptions:{color:'#3366FF',fillColor:'rgba(51,102,255,0.12)',fillOpacity:0.2,weight:3}},
+        polyline:{shapeOptions:{color:'#3366FF',weight:3}},
+        marker:true
+      },edit:{featureGroup:DI,remove:true}
+    });
+    MI._dc=dc;
+    MI.on(L.Draw.Event.CREATED,function(e){
+      var l=e.layer;
+      DI.addLayer(l);
+      if(e.layerType==='polygon'||e.layerType==='rectangle'||e.layerType==='circle'){
+        l.setStyle({color:'#3366FF',fillColor:'#3366FF',fillOpacity:0.12,weight:3});
+        pendingLayer=l;
+        document.getElementById('hoodName').value='حي '+(hoods.length+1);
+        mo('nameModal');
+      }else{
+        tt('📍 تم إضافة نقطة','inf');
+      }
+    });
+    MI.on(L.Draw.Event.EDITED,function(){updateSelection();updateHoodLabels();});
+    MI.on(L.Draw.Event.DELETED,function(){
+      // Remove from hoods if deleted
+      DI.eachLayer(function(l){
+        if(l._hoodId){hoods=hoods.filter(function(h){return h.id!==l._hoodId;});}
+      });
+      updateSelection();
+    });
+  };
+  document.body.appendChild(s);
+}
+
+// ===== POINT IN POLYGON (lightweight, no turf.js) =====
+function ptInPoly(px,py,verts){
+  var inside=false;
+  for(var i=0,j=verts.length-1;i<verts.length;j=i++){
+    var xi=verts[i][0],yi=verts[i][1],xj=verts[j][0],yj=verts[j][1];
+    if((yi>py)!==(yj>py)&&px<(xj-xi)*(py-yi)/(yj-yi)+xi)inside=!inside;
+  }
+  return inside;
+}
+
+// ===== SAVE NEIGHBORHOOD NAME =====
+function sn(){
+  var village=document.getElementById('hoodVillage').value;
+  var name=document.getElementById('hoodName').value.trim()||'حي';
+  if(village)name=village+' - '+name;
+  var color=document.getElementById('hoodColor').value;
+  if(!pendingLayer){mc('nameModal');return;}
+  var id=Date.now().toString(36)+Math.random().toString(36).substr(2,4);
+  pendingLayer.setStyle({color:color,fillColor:color,fillOpacity:0.12,weight:3});
+  pendingLayer._hoodId=id;
+  // Add label
+  var center=pendingLayer.getBounds().getCenter();
+  var label=L.marker(center,{
+    icon:L.divIcon({
+      className:'',
+      html:'<div class="neighborhood-label">'+name+'</div>',
+      iconSize:[0,0],iconAnchor:[0,0]
+    }),
+    zIndexOffset:1000
+  });
+  label._hoodId=id;
+  DI.addLayer(label);
+  var hood={id:id,name:name,color:color,layer:pendingLayer,label:label};
+  hoods.push(hood);
+  mc('nameModal');
+  pendingLayer=null;
+  updateSelection();
+  autoSave();tt('✅ تم حفظ الحي: '+name,'ok');
+}
+function can(){
+  if(pendingLayer){DI.removeLayer(pendingLayer);pendingLayer=null;}
+  mc('nameModal');
+}
+
+// ===== TOGGLE DRAW =====
+function td(){
+  drawMode=!drawMode;
+  var b=document.getElementById('btnDraw'),ind=document.getElementById('drawIndicator');
+  if(drawMode){
+    b.style.color='#42A5F5';ind.classList.add('show');
+    if(MI&&MI._dc)MI.addControl(MI._dc);
+    if(MI){MI.dragging.disable();MI.touchZoom.disable()}
+    tt('✏️ ارسم الحي على الخريطة','inf');
+  }else{
+    b.style.color='';ind.classList.remove('show');
+    if(MI&&MI._dc)MI.removeControl(MI._dc);
+    if(MI){MI.dragging.enable();MI.touchZoom.enable()}
+  }
+}
+
+// ===== FILE HANDLING =====
+function hf(files){
+  mc('importModal');
+  var type=document.getElementById('importType').value;
+  for(var i=0;i<files.length;i++){
+    var f=files[i];
+    var fn=f.name.toLowerCase();
+    var impType=type;
+    (function(file,name,itype){
+      var r=new FileReader();
+      r.onload=function(e){
+        var cnt=e.target.result;
+        if(name.endsWith('.kmz')){
+          try{
+            JSZip.loadAsync(cnt).then(function(zip){
+              var kf=zip.file('doc.kml');
+              if(!kf){zip.forEach(function(p,fl){if(p.endsWith('.kml'))kf=fl;});}
+              if(kf)kf.async('string').then(function(s){pk(s,itype);});
+              else tt('لم يتم العثور على KML في KMZ','err');
+            }).catch(function(){tt('خطأ في فتح KMZ','err');});
+          }catch(ex){tt('خطأ في KMZ','err');}
+        }else if(name.endsWith('.kml')){pk(cnt,itype);}
+        else if(name.endsWith('.gpx')){pg(cnt,itype);}
+        else if(name.endsWith('.csv')){pc(cnt,itype);}
+        else if(name.endsWith('.json')){pj(cnt,itype);}
+        else{tt('صيغة غير مدعومة: '+name,'err');}
+      };
+      if(name.endsWith('.kmz'))r.readAsArrayBuffer(file);
+      else r.readAsText(file);
+    })(f,fn,impType);
+  }
+}
+
+// ===== PARSE KML =====
+function parseKMLCoords(str){
+  var out=[];
+  str.trim().split(/\s+/).forEach(function(s){
+    if(!s.trim())return;
+    var parts=s.trim().split(',');
+    if(parts.length>=2){var lat=parseFloat(parts[1]),lon=parseFloat(parts[0]);if(!isNaN(lat)&&!isNaN(lon))out.push([lat,lon]);}
+  });
+  return out;
+}
+function pk(xmlStr,importType){
+  var p=new DOMParser(),xm=p.parseFromString(xmlStr,'text/xml');
+  if(xm.querySelector('parsererror')){tt('خطأ في KML','err');return;}
+  var pms=xm.querySelectorAll('Placemark'),cnt=0;
+  var isLine=importType==='waterline'||importType==='sewerline';
+  pms.forEach(function(pm){
+    var n=(pm.querySelector('name')?.textContent||'').trim();
+    var d=(pm.querySelector('description')?.textContent||'').trim();
+    // Try LineString first
+    var ls=pm.querySelector('LineString');
+    if(isLine&&ls){
+      var c=ls.querySelector('coordinates');
+      if(c){var coords=parseKMLCoords(c.textContent);if(coords.length>=2){addLine(coords,n,null,d,importType);cnt++;}}
+      return;
+    }
+    // Try Point
+    var c=null;
+    var pt=pm.querySelector('Point');
+    if(pt)c=pt.querySelector('coordinates');
+    if(!c)c=pm.querySelector('coordinates');
+    if(c){
+      c.textContent.trim().split(/\s+/).forEach(function(coordStr){
+        if(coordStr.trim()){
+          var parts=coordStr.trim().split(',');
+          if(parts.length>=2){
+            var lat=parseFloat(parts[1]),lon=parseFloat(parts[0]),alt=parts.length>=3?parseFloat(parts[2]):null;
+            if(!isNaN(lat)&&!isNaN(lon)){
+              ap(lat,lon,n,d,importType,alt);
+              cnt++;
+            }
+          }
+        }
+      });
+    }
+  });
+  if(cnt===0){
+    var cs=xm.querySelectorAll('coordinates');
+    cs.forEach(function(el){
+      el.textContent.trim().split(/\s+/).forEach(function(coordStr){
+        if(coordStr.trim()){
+          var parts=coordStr.trim().split(',');
+          if(parts.length>=2){
+            var lat=parseFloat(parts[1]),lon=parseFloat(parts[0]),alt=parts.length>=3?parseFloat(parts[2]):null;
+            if(!isNaN(lat)&&!isNaN(lon)){ap(lat,lon,'','',importType,alt);cnt++;}
+          }
+        }
+      });
+    });
+  }
+  tt('✅ تم استيراد '+cnt+' عنصر من KML','ok');
+  ui();if(cnt>0){cc();saveData();}
+}
+
+// ===== PARSE GPX =====
+function pg(xmlStr,importType){
+  var p=new DOMParser(),xm=p.parseFromString(xmlStr,'text/xml'),cnt=0;
+  var isLine=importType==='waterline'||importType==='sewerline';
+  if(isLine){
+    xm.querySelectorAll('trk').forEach(function(trk){
+      var n=(trk.querySelector('name')?.textContent||'').trim();
+      var d=(trk.querySelector('desc')?.textContent||'').trim();
+      trk.querySelectorAll('trkseg').forEach(function(seg){
+        var coords=[];
+        seg.querySelectorAll('trkpt').forEach(function(pt){
+          var lat=parseFloat(pt.getAttribute('lat')),lon=parseFloat(pt.getAttribute('lon'));
+          if(!isNaN(lat)&&!isNaN(lon))coords.push([lat,lon]);
+        });
+        if(coords.length>=2){addLine(coords,n,null,d,importType);cnt++;}
+      });
+    });
+    if(!cnt){
+      xm.querySelectorAll('rte').forEach(function(rte){
+        var n=(rte.querySelector('name')?.textContent||'').trim();
+        var coords=[];
+        rte.querySelectorAll('rtept').forEach(function(pt){
+          var lat=parseFloat(pt.getAttribute('lat')),lon=parseFloat(pt.getAttribute('lon'));
+          if(!isNaN(lat)&&!isNaN(lon))coords.push([lat,lon]);
+        });
+        if(coords.length>=2){addLine(coords,n,null,'',importType);cnt++;}
+      });
+    }
+  }else{
+    xm.querySelectorAll('wpt,trkpt,rtept').forEach(function(pt){
+      var lat=parseFloat(pt.getAttribute('lat')),lon=parseFloat(pt.getAttribute('lon'));
+      var n=(pt.querySelector('name')?.textContent||pt.querySelector('cmt')?.textContent||'').trim();
+      var ele=pt.querySelector('ele');var alt=ele?parseFloat(ele.textContent):null;
+      if(!isNaN(lat)&&!isNaN(lon)){ap(lat,lon,n,'',importType,alt);cnt++;}
+    });
+  }
+  tt('✅ تم استيراد '+cnt+' عنصر من GPX','ok');
+  ui();if(cnt>0){cc();saveData();}
+}
+
+// ===== PARSE CSV =====
+function pc(csvStr,importType){
+  var lines=csvStr.trim().split('\n');
+  if(lines.length<2){tt('CSV فارغ','err');return;}
+  var h=lines[0].split(',').map(function(x){return x.trim().toLowerCase();});
+  var li=-1,lo=-1,la=-1,nm=-1,ph=-1,ad=-1,si=-1;
+  h.forEach(function(v,i){
+    if(v.includes('lat')||v.includes('عرض'))li=i;
+    if(v.includes('lon')||v.includes('lng')||v.includes('طول'))lo=i;
+    if(v.includes('alt')||v.includes('ele')||v.includes('ارتفاع')||v.includes('elev'))la=i;
+    if(v.includes('name')||v.includes('اسم'))nm=i;
+    if(v.includes('phone')||v.includes('هاتف'))ph=i;
+    if(v.includes('addr')||v.includes('عنوان'))ad=i;
+    if(v.includes('sub')||v.includes('اشتراك'))si=i;
+  });
+  if(li===-1||lo===-1){tt('لا يوجد إحداثيات','err');return;}
+  var cnt=0;
+  for(var i=1;i<lines.length;i++){
+    var vals=lines[i].split(',').map(function(x){return x.trim().replace(/^"|"$/g,'');});
+    var lat=parseFloat(vals[li]),lon=parseFloat(vals[lo]);
+    var alt=la>=0?parseFloat(vals[la]):null;
+    if(!isNaN(lat)&&!isNaN(lon)){
+      var name=nm>=0?vals[nm]||'':'',phone=ph>=0?vals[ph]||'':'',addr=ad>=0?vals[ad]||'':'',subId=si>=0?vals[si]||'':'';
+      ap(lat,lon,name,[phone?'هاتف: '+phone:'',addr?'عنوان: '+addr:''].filter(Boolean).join(' | '),importType,alt,subId);
+      var pt=importType==='pumps'?pumps[pumps.length-1]:subs[subs.length-1];
+      if(pt){pt.phone=phone;pt.address=addr;pt.subId=subId;}
+      cnt++;
+    }
+  }
+  tt('✅ تم استيراد '+cnt+' سجل من CSV','ok');
+  ui();if(cnt>0){cc();saveData();}
+}
+
+// ===== PARSE GEOJSON =====
+function pj(jsonStr,importType){
+  try{
+    var gj=JSON.parse(jsonStr),cnt=0;
+    var isLine=importType==='waterline'||importType==='sewerline';
+    if(gj.features)gj.features.forEach(function(f){
+      if(!f.geometry)return;
+      var n=f.properties?.name||'',d=JSON.stringify(f.properties||{});
+      var dia=f.properties?.diameter||f.properties?.قطر||null;
+      if(f.geometry.type==='Point'||f.geometry.type==='MultiPoint'){
+        var cs=f.geometry.type==='Point'?[f.geometry.coordinates]:f.geometry.coordinates;
+        cs.forEach(function(c){
+          var lon=c[0],lat=c[1],alt=c.length>=3?c[2]:null;
+          if(!isNaN(lat)&&!isNaN(lon)){ap(lat,lon,n,d,importType,alt);cnt++;}
+        });
+      }else if(isLine&&(f.geometry.type==='LineString'||f.geometry.type==='MultiLineString')){
+        var lines=f.geometry.type==='LineString'?[f.geometry.coordinates]:f.geometry.coordinates;
+        lines.forEach(function(cs){
+          if(cs.length<2)return;
+          var coords=cs.map(function(c){return [c[1],c[0]];});
+          addLine(coords,n,dia,d,importType);
+          cnt++;
+        });
+      }
+    });
+    tt('✅ تم استيراد '+cnt+' عنصر','ok');
+  }catch(e){tt('خطأ في الملف: '+e.message,'err');}
+  ui();if(cnt>0){cc();saveData();}
+}
+
+// ===== ADD POINT =====
+function ap(lat,lon,name,desc,type,alt,subId){
+  var id=Date.now().toString(36)+Math.random().toString(36).substr(2,4);
+  var altVal=alt&&!isNaN(alt)?alt:null;
+  var pt={id:id,lat:lat,lng:lon,name:name||'نقطة',desc:desc,alt:altVal,subId:subId||''};
+  pt.type=type;
+  if(type==='pumps'||type==='inspection'||type==='pumpstop'||type==='tank'||type==='manhole'||type==='complaint'){
+    var cls,icon,col,label,layer,arr;
+    if(type==='pumps'){cls='pump-mkr';icon='🏭';col='#E65100';label='دور ضخ';layer=PL;arr=pumps;pt.capacity='';}
+    else if(type==='inspection'){cls='insp-mkr';icon='👁️';col='#E91E63';label='نظارة / انظار';layer=IL;arr=pumps;}
+    else if(type==='pumpstop'){cls='stop-mkr';icon='⛔';col='#B71C1C';label='توقف الضخ';layer=KL;arr=pumps;}
+    else if(type==='tank'){cls='tank-mkr';icon='🚰';col='#00BCD4';label='خزان مياه';layer=TL;arr=tanks;}
+    else if(type==='manhole'){cls='manhole-mkr';icon='🕳️';col='#5D4037';label='منهول صرف صحي';layer=MHL;arr=manholes;}
+    else{cls='comp-mkr';icon='📋';col='#FF7043';label='بلاغ صيانة';layer=CL;arr=complaints;}
+    arr.push(pt);
+    var m=L.marker([lat,lon],{icon:L.divIcon({className:cls,html:'<div>'+icon+'</div>',iconSize:[26,26],iconAnchor:[13,13]})});
+    var popup='<b style="color:'+col+'">'+pt.name+'</b><br><span style="color:#888;font-size:11px">'+(pt.desc||label)+'</span>';
+    if(pt.alt!==null){popup+='<br><span style="color:#aaa;font-size:10px">ارتفاع: '+pt.alt.toFixed(1)+' م</span>';popup+=elevDiff(pt);}
+    popup+='<br><button class="wa-popup-btn" onclick="waPopupPump(\''+id+'\')">📱 واتساب</button>';
+    m.bindPopup(popup);m._pid=id;layer.addLayer(m);
+  }else{
+    subs.push(pt);
+    var m=L.marker([lat,lon],{icon:L.divIcon({className:'sub-mkr',html:'<div></div>',iconSize:[13,13],iconAnchor:[7,7]})});
+    var popup='<b style="color:#1565C0">'+pt.name+'</b><br><span style="color:#888;font-size:11px">'+(pt.desc||'')+'</span>';
+    if(pt.subId)popup+='<br><span style="font-size:10px;color:#FFD54F">🔢 رقم اشتراك: '+pt.subId+'</span>';
+    if(pt.alt!==null){popup+='<br><span style="color:#aaa;font-size:10px">ارتفاع: '+pt.alt.toFixed(1)+' م</span>';popup+=elevDiff(pt);}
+    popup+='<br><button class="wa-popup-btn" onclick="waPopup(\''+id+'\')">📱 واتساب</button>';
+    m.bindPopup(popup);m._sid=id;SL.addLayer(m);
+  }
+  autoSave();return m;
+}
+
+// ===== ADD LINE (pipe) =====
+function haversineDist(lat1,lng1,lat2,lng2){
+  var R=6371000;var dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function addLine(coords,name,diameter,desc,type){
+  if(!coords||coords.length<2)return null;
+  var id=Date.now().toString(36)+Math.random().toString(36).substr(2,4);
+  var totalLength=0;
+  for(var i=1;i<coords.length;i++)totalLength+=haversineDist(coords[i-1][0],coords[i-1][1],coords[i][0],coords[i][1]);
+  var pt={id:id,type:type,name:name||'خط',coords:coords,length:totalLength,diameter:diameter||null,desc:desc||''};
+  var col,label,icon,layer,arr;
+  if(type==='waterline'){col='#29B6F6';label='خط مياه';icon='🔵';layer=WTL;arr=waterlines;}
+  else if(type==='gravityline'){col='#AB47BC';label='خط جباه (جابية)';icon='🟣';layer=GTL;arr=gravitylines;}
+  else{col='#8D6E63';label='خط صرف صحي';icon='🟤';layer=STL;arr=sewerlines;}
+  arr.push(pt);
+  var latlngs=coords.map(function(c){return [c[0],c[1]];});
+  var m=L.polyline(latlngs,{color:col,weight:4,opacity:.8}).addTo(layer);
+  var diam=diameter?'قطر '+diameter+' مم':'';
+  var popup='<b style="color:'+col+'">'+icon+' '+pt.name+'</b><br><span style="color:#888;font-size:11px">'+label+' | '+totalLength.toFixed(1)+' م'+(diam?' | '+diam:'')+'</span>';
+  if(pt.desc)popup+='<br><span style="color:#aaa;font-size:10px">'+pt.desc+'</span>';
+  popup+='<br><button class="wa-popup-btn" onclick="waPopupLine(\''+id+'\',\''+type+'\')">📱 واتساب</button>';
+  m.bindPopup(popup);m._lid=id;
+  autoSave();return m;
+}
+
+// ===== TILE SWITCHER =====
+function ts(){
+  var i=(tileIdx+1)%tileSources.length;
+  loadTile(i);
+  tt('🗺️ '+tileSources[i].name,'inf');
+}
+
+// ===== ELEVATION DIFF =====
+function getHoodVertices(hid){
+  var h=hoods.find(function(x){return x.id===hid;});
+  if(!h||!h.layer)return null;
+  var ll=h.layer.getLatLngs();
+  if(!ll.length)return null;
+  return ll[0].map(function(c){return [c.lng,c.lat];});
+}
+function ptInHood(lng,lat,hid){
+  var verts=getHoodVertices(hid);
+  return verts?ptInPoly(lng,lat,verts):false;
+}
+function elevDiff(pt){
+  // Find which hoods contain this point
+  var hoodIds=[];
+  if(DI)DI.eachLayer(function(l){
+    if(l._hoodId&&l instanceof L.Polygon){
+      var verts=getHoodVertices(l._hoodId);
+      if(verts&&ptInPoly(pt.lng,pt.lat,verts))hoodIds.push(l._hoodId);
+    }
+  });
+  // Collect relevant points: same hood(s), or all if no hood
+  function insideHood(lng,lat){return hoodIds.some(function(hid){return ptInHood(lng,lat,hid);});}
+  var alts=[];
+  if(hoodIds.length>0){
+    subs.forEach(function(s){if(s.alt!==null&&insideHood(s.lng,s.lat))alts.push(s.alt);});
+    pumps.forEach(function(p){if(p.alt!==null&&insideHood(p.lng,p.lat))alts.push(p.alt);});
+    tanks.forEach(function(t){if(t.alt!==null&&insideHood(t.lng,t.lat))alts.push(t.alt);});
+    manholes.forEach(function(m){if(m.alt!==null&&insideHood(m.lng,m.lat))alts.push(m.alt);});
+  }else{
+    subs.forEach(function(s){if(s.alt!==null)alts.push(s.alt);});
+    pumps.forEach(function(p){if(p.alt!==null)alts.push(p.alt);});
+    tanks.forEach(function(t){if(t.alt!==null)alts.push(t.alt);});
+    manholes.forEach(function(m){if(m.alt!==null)alts.push(m.alt);});
+  }
+  if(alts.length<2||pt.alt===null)return '';
+  var mn=Math.min.apply(null,alts),mx=Math.max.apply(null,alts);
+  var fromLow=pt.alt-mn,fromHigh=mx-pt.alt;
+  var hh=hoodIds.length>0?hoods.find(function(x){return x.id===hoodIds[0];}):null;
+  var tag=hh?' في '+hh.name:'';
+  var s='<br><span style="color:#81C784;font-size:10px">📊 أدنى ارتفاع'+tag+': '+mn.toFixed(1)+' م';
+  s+='<br>↕ أنت: +'+fromLow.toFixed(1)+' م (عن الأدنى)';
+  if(fromHigh>0)s+=' · -'+fromHigh.toFixed(1)+' م (عن الأعلى)';
+  s+='</span>';
+  return s;
+}
+
+// ===== FETCH ELEVATIONS =====
+function fe(){
+  var pts=[];
+  subs.forEach(function(s){if(s.alt===null&&s.lat&&s.lng)pts.push({lat:s.lat,lng:s.lng,ref:s,type:'sub'});});
+  pumps.forEach(function(p){if(p.alt===null&&p.lat&&p.lng)pts.push({lat:p.lat,lng:p.lng,ref:p,type:'pump'});});
+  if(pts.length===0){tt('جميع النقاط لها ارتفاع','inf');return;}
+  var batches=[];
+  for(var i=0;i<pts.length;i+=20)batches.push(pts.slice(i,i+20));
+  var done=0,failed=false;
+  tt('🏔️ جاري جلب الارتفاعات ('+pts.length+' نقطة)...','inf');
+  function fb(idx){
+    if(idx>=batches.length){
+      if(done>0){rp();ui();cc();}
+      var msg='✅ تم تحديث '+done+' ارتفاع';
+      if(failed)msg+=' (بعضها فشل)';
+      tt(msg,'ok');
+      return;
+    }
+    var bch=batches[idx];
+    var locs=bch.map(function(p){return p.lat+','+p.lng;}).join('|');
+    var x=new XMLHttpRequest();
+    x.open('GET','https://api.open-elevation.com/api/v1/lookup?locations='+locs,true);
+    x.timeout=15000;
+    x.onload=function(){
+      if(x.status===200){
+        try{
+          var res=JSON.parse(x.responseText);
+          if(res.results)res.results.forEach(function(r,i){
+            if(r.elevation!==null&&r.elevation!==undefined&&i<bch.length){bch[i].ref.alt=r.elevation;done++;}
+          });
+        }catch(e){}
+      }
+      setTimeout(function(){fb(idx+1);},300);
+    };
+    x.onerror=function(){failed=true;if(!window._feErr){window._feErr=true;tt('❌ فشل الاتصال بخادم الارتفاعات','err');}};
+    x.ontimeout=function(){failed=true;if(!window._feErr){window._feErr=true;tt('❌ انتهت مهلة الاتصال','err');}};
+    x.send();
+  }
+  fb(0);
+}
+// ===== REBIND POPUPS =====
+function rp(){
+  SL.eachLayer(function(m){
+    var id=m._sid;if(!id)return;
+    var pt=subs.find(function(s){return s.id===id;});if(!pt)return;
+    var popup='<b style="color:#1565C0">'+pt.name+'</b><br><span style="color:#888;font-size:11px">'+(pt.desc||'')+'</span>';
+    if(pt.subId)popup+='<br><span style="font-size:10px;color:#FFD54F">🔢 رقم اشتراك: '+pt.subId+'</span>';
+    if(pt.alt!==null){popup+='<br><span style="color:#aaa;font-size:10px">ارتفاع: '+pt.alt.toFixed(1)+' م</span>';popup+=elevDiff(pt);}
+    popup+='<br><button class="wa-popup-btn" onclick="waPopup(\''+id+'\')">📱 واتساب</button>';
+    m.bindPopup(popup);
+  });
+  CL.eachLayer(function(m){
+    var id=m._pid;if(!id)return;
+    var pt=complaints.find(function(c){return c.id===id;});if(!pt)return;
+    var popup='<b style="color:#FF7043">📋 '+pt.name+'</b><br><span style="color:#888;font-size:11px">'+(pt.desc||'بلاغ صيانة')+'</span>';
+    if(pt.alt!==null){popup+='<br><span style="color:#aaa;font-size:10px">ارتفاع: '+pt.alt.toFixed(1)+' م</span>';popup+=elevDiff(pt);}
+    popup+='<br><button class="wa-popup-btn" onclick="waPopupPump(\''+id+'\')">📱 واتساب</button>';
+    m.bindPopup(popup);
+  });
+  [TL,MHL].forEach(function(lg){
+    lg.eachLayer(function(m){
+      var id=m._pid;if(!id)return;
+      var arr=tanks.find(function(t){return t.id===id;})?tanks:manholes;
+      var pt=arr.find(function(p){return p.id===id;});if(!pt)return;
+      var col=arr===tanks?'#00BCD4':'#5D4037',icon=arr===tanks?'🚰':'🕳️',label=arr===tanks?'خزان مياه':'منهول صرف صحي';
+      var popup='<b style="color:'+col+'">'+pt.name+'</b><br><span style="color:#888;font-size:11px">'+(pt.desc||label)+'</span>';
+      if(pt.alt!==null){popup+='<br><span style="color:#aaa;font-size:10px">ارتفاع: '+pt.alt.toFixed(1)+' م</span>';popup+=elevDiff(pt);}
+      popup+='<br><button class="wa-popup-btn" onclick="waPopupPump(\''+id+'\')">📱 واتساب</button>';
+      m.bindPopup(popup);
+    });
+  });
+  [PL,IL,KL].forEach(function(lg){
+    lg.eachLayer(function(m){
+      var id=m._pid;if(!id)return;
+      var pt=pumps.find(function(p){return p.id===id;});if(!pt)return;
+      var col='#E65100',icon='🏭',label='دور ضخ';
+      if(pt.type==='inspection'){col='#E91E63';icon='👁️';label='نظارة / انظار';}
+      if(pt.type==='pumpstop'){col='#B71C1C';icon='⛔';label='توقف الضخ';}
+      var popup='<b style="color:'+col+'">'+pt.name+'</b><br><span style="color:#888;font-size:11px">'+(pt.desc||label)+'</span>';
+      if(pt.alt!==null){popup+='<br><span style="color:#aaa;font-size:10px">ارتفاع: '+pt.alt.toFixed(1)+' م</span>';popup+=elevDiff(pt);}
+      popup+='<br><button class="wa-popup-btn" onclick="waPopupPump(\''+id+'\')">📱 واتساب</button>';
+      m.bindPopup(popup);
+    });
+  });
+}
+
+// ===== UPDATE SELECTION =====
+function updateSelection(){
+  subs.forEach(function(s){s.inside=false;});
+  var polys=[];
+  if(DI)DI.eachLayer(function(l){
+    if(l instanceof L.Polygon||l instanceof L.Circle)polys.push(l);
+  });
+  if(polys.length===0){ui();return;}
+  subs.forEach(function(sub){
+    for(var p of polys){
+      var inside=false;
+      if(p instanceof L.Circle){
+        var d=MI.distance(p.getLatLng(),L.latLng(sub.lat,sub.lng));
+        if(d<=p.getRadius())inside=true;
+      }else{
+        var ll=p.getLatLngs();
+        if(ll.length>0){
+          try{
+            var verts=ll[0].map(function(c){return [c.lng,c.lat];});
+            inside=ptInPoly(sub.lng,sub.lat,verts);
+          }catch(e){}
+        }
+      }
+      if(inside){sub.inside=true;break;}
+    }
+  });
+  SL.eachLayer(function(m){
+    var id=m._sid,s=subs.find(function(x){return x.id===id;});
+    var el=m.getElement();
+    if(el&&s)el.classList.toggle('sel',s.inside);
+  });
+  ui();
+  var count=subs.filter(function(s){return s.inside;}).length;
+  if(count>0){
+    // Calculate elevation info
+    var insideSubs=subs.filter(function(s){return s.inside&&s.alt!==null;});
+    if(insideSubs.length>1){
+      var minAlt=Math.min.apply(Math,insideSubs.map(function(s){return s.alt;}));
+      var maxAlt=Math.max.apply(Math,insideSubs.map(function(s){return s.alt;}));
+      var diff=(maxAlt-minAlt).toFixed(1);
+      tt('📍 '+count+' مشترك | ارتفاع: '+diff+' م (من '+minAlt.toFixed(1)+' إلى '+maxAlt.toFixed(1)+')','inf');
+    }else{
+      tt('📍 '+count+' مشترك داخل المنطقة','inf');
+    }
+  }
+}
+
+// ===== TOGGLE PUMPS =====
+function tp(){
+  pumpVis=!pumpVis;
+  var b=document.getElementById('btnPumps');
+  if(pumpVis){
+    MI.addLayer(PL);MI.addLayer(IL);MI.addLayer(KL);
+    b.style.color='#FFD54F';
+    var pc=pumps.filter(function(p){return !p.type||p.type==='pumps';}).length;
+    var ic=pumps.filter(function(p){return p.type==='inspection';}).length;
+    var sc=pumps.filter(function(p){return p.type==='pumpstop';}).length;
+    tt('🏭 '+pc+' دور ضخ | 👁️ '+ic+' نظارة | ⛔ '+sc+' توقف','inf');
+  }else{MI.removeLayer(PL);MI.removeLayer(IL);MI.removeLayer(KL);b.style.color='';}
+}
+
+// ===== UI UPDATE =====
+function ui(){
+  var inside=subs.filter(function(s){return s.inside;}).length;
+  var pc=pumps.filter(function(p){return !p.type||p.type==='pumps';}).length;
+  var ic=pumps.filter(function(p){return p.type==='inspection';}).length;
+  var sc=pumps.filter(function(p){return p.type==='pumpstop';}).length;
+  document.getElementById('subCount').textContent=subs.length;
+  var extra='';
+  if(pc)extra+=' 🏭'+pc; if(ic)extra+=' 👁️'+ic; if(sc)extra+=' ⛔'+sc;
+  document.getElementById('usersIcon').textContent='👥 '+subs.length+extra+(inside?' 📍 '+inside:'');
+  // Update neighborhood list
+  updateHoodLabels();
+}
+
+// ===== NEIGHBORHOOD LABELS/POPUPS =====
+function updateHoodLabels(){
+  hoods.forEach(function(h){
+    if(!h.layer||!MI.hasLayer(h.layer))return;
+    var center=h.layer.getBounds().getCenter();
+    h.label.setLatLng(center);
+    // Update popup
+    var insideSubs=subs.filter(function(s){return s.inside;});
+    var hoodSubs=subs.filter(function(s){
+      try{
+        var ll=h.layer.getLatLngs();
+        if(ll.length>0){
+          var coords=ll[0].map(function(c){return [c.lng,c.lat];});
+          return ptInPoly(s.lng,s.lat,coords);
+        }
+      }catch(e){}
+      return false;
+    });
+    var html='<div style="text-align:center"><b style="font-size:16px;color:'+h.color+'">'+h.name+'</b>';
+    html+='<br><span style="color:#888;font-size:12px">المشتركين: '+hoodSubs.length+'</span>';
+    var withAlt=hoodSubs.filter(function(s){return s.alt!==null;});
+    if(withAlt.length>1){
+      var minA=Math.min.apply(Math,withAlt.map(function(s){return s.alt;}));
+      var maxA=Math.max.apply(Math,withAlt.map(function(s){return s.alt;}));
+      html+='<br><span style="color:#FFD54F;font-size:11px">ارتفاع: '+minA.toFixed(1)+' - '+maxA.toFixed(1)+' م</span>';
+      html+='<br><span style="color:#aaa;font-size:10px">فرق: '+(maxA-minA).toFixed(1)+' م</span>';
+    }
+    html+='</div>';
+    h.layer.unbindPopup();
+    h.layer.bindPopup(html);
+  });
+}
+
+// ===== NEIGHBORHOODS LIST MODAL =====
+function updateNeighborhoodsList(){
+  var el=document.getElementById('hoodsList');
+  if(hoods.length===0){el.innerHTML='<p style="color:#888;text-align:center;padding:20px">لا توجد أحياء مرسومة</p>';document.getElementById('hoodsTotal').textContent='';return;}
+  var html='';
+  hoods.forEach(function(h,i){
+    var insideSubs=subs.filter(function(s){
+      try{
+        var ll=h.layer.getLatLngs();
+        if(ll.length>0){
+          var coords=ll[0].map(function(c){return [c.lng,c.lat];});
+          return ptInPoly(s.lng,s.lat,coords);
+        }
+      }catch(e){}
+      return false;
+    });
+    var withAlt=insideSubs.filter(function(s){return s.alt!==null;});
+    html+='<div style="background:rgba(255,255,255,.05);border-radius:8px;padding:10px;margin-bottom:8px;border-right:4px solid '+h.color+'">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center">';
+    html+='<b style="color:'+h.color+'">'+h.name+'</b>';
+    html+='<div><button onclick="exportOneHood(\''+h.id+'\')" style="background:none;border:none;color:#81C784;font-size:14px;cursor:pointer;margin-left:8px" title="تصدير">📦</button><button onclick="dh(\''+h.id+'\')" style="background:none;border:none;color:#ef5350;font-size:14px;cursor:pointer">🗑️</button></div>';
+    html+='</div>';
+    html+='<div style="color:#888;font-size:11px;margin-top:4px">المشتركين: '+insideSubs.length;
+    if(withAlt.length>1){
+      var minA=Math.min.apply(Math,withAlt.map(function(s){return s.alt;}));
+      var maxA=Math.max.apply(Math,withAlt.map(function(s){return s.alt;}));
+      html+=' | الارتفاع: '+minA.toFixed(1)+' - '+maxA.toFixed(1)+' م (فرق '+(maxA-minA).toFixed(1)+' م)';
+    }
+    html+='</div></div>';
+  });
+  el.innerHTML=html;
+  document.getElementById('hoodsTotal').textContent='إجمالي الأحياء: '+hoods.length;
+}
+function dh(id){
+  if(!confirm('حذف هذا الحي؟'))return;
+  hoods=hoods.filter(function(h){return h.id!==id;});
+  DI.eachLayer(function(l){if(l._hoodId===id)DI.removeLayer(l);});
+  updateSelection();updateNeighborhoodsList();ui();autoSave();
+}
+// Override mo for neighborhoods modal to refresh list
+var origMo=mo;
+function mo(id){
+  if(id==='neighborhoodsModal')updateNeighborhoodsList();
+  document.getElementById(id).classList.add('show');
+}
+function mc(id){document.getElementById(id).classList.remove('show');}
+function mc2(id){document.getElementById(id).classList.remove('show');}
+document.querySelectorAll('.modal-overlay').forEach(function(e){
+  e.addEventListener('click',function(ev){if(ev.target===this)this.classList.remove('show');});
+});
+
+// ===== TOAST =====
+function tt(msg,type){
+  var el=document.getElementById('toast');el.className='toast '+(type||'inf');
+  el.innerHTML=(type==='ok'?'✅':type==='err'?'❌':'ℹ️')+' '+msg;el.classList.add('show');
+  clearTimeout(el._t);el._t=setTimeout(function(){el.classList.remove('show');},3000);
+}
+
+// ===== EXPORT =====
+function ex(){
+  var total=subs.length,inside=subs.filter(function(s){return s.inside;}).length;
+  document.getElementById('exportInfo').textContent='👥 '+total+' مشترك | داخل: '+inside+(inside!==total?' | خارج: '+(total-inside):'');
+  mo('exportModal');
+}
+function de(){
+  var t=document.getElementById('exportType').value;
+  var data;
+  if(t==='inside')data=subs.filter(function(s){return s.inside;});
+  else if(t==='all')data=subs;
+  else if(t==='pumps')data=pumps.filter(function(p){return !p.type||p.type==='pumps';});
+  else if(t==='inspection')data=pumps.filter(function(p){return p.type==='inspection';});
+  else if(t==='pumpstop')data=pumps.filter(function(p){return p.type==='pumpstop';});
+  else if(t==='tank')data=tanks;
+  else if(t==='manhole')data=manholes;
+  else if(t==='waterline')data=waterlines;
+  else if(t==='sewerline')data=sewerlines;
+  else if(t==='gravityline')data=gravitylines;
+  else if(t==='complaint')data=complaints;
+  else data=[];
+  if(data.length===0){tt('لا توجد بيانات','err');return;}
+  if(!window.XLSX){
+    tt('جاري تحميل مكتبة Excel...','inf');
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=function(){de();};
+    document.body.appendChild(s);
+    return;
+  }
+  // Compute hood-based min elevation for each point
+  function getLowestInHood(lng,lat){
+    var hoodIds=[];
+    if(DI)DI.eachLayer(function(l){
+      if(l._hoodId&&l instanceof L.Polygon){
+        var ll=l.getLatLngs();
+        if(ll.length){
+          var verts=ll[0].map(function(c){return [c.lng,c.lat];});
+          if(ptInPoly(lng,lat,verts))hoodIds.push(l._hoodId);
+        }
+      }
+    });
+    if(!hoodIds.length)return null;
+    var mn=null;
+    function check(p){
+      if(p.alt===null)return;
+      var inside=hoodIds.some(function(hid){
+        var h=hoods.find(function(x){return x.id===hid;});
+        if(!h||!h.layer)return false;
+        var ll=h.layer.getLatLngs();
+        if(!ll.length)return false;
+        return ptInPoly(p.lng,p.lat,ll[0].map(function(c){return [c.lng,c.lat];}));
+      });
+      if(inside&&(mn===null||p.alt<mn))mn=p.alt;
+    }
+    subs.forEach(check);pumps.forEach(check);
+    return mn;
+  }
+  var typeLabels={'pumps':'🏭 دور ضخ','inspection':'👁️ نظارة','pumpstop':'⛔ توقف ضخ','tank':'🚰 خزان','manhole':'🕳️ منهول','complaint':'📋 بلاغ صيانة'};
+  var isLineData=t==='waterline'||t==='sewerline'||t==='gravityline';
+  var ws;
+  if(isLineData){
+    ws=[['النوع','الاسم','الطول (م)','القطر (مم)','ملاحظات']];
+    data.forEach(function(it){
+      var tl=t==='waterline'?'🔵 خط مياه':t==='gravityline'?'🟣 مسارات الجباه':'🟤 خط صرف صحي';
+      ws.push([tl,it.name||'',it.length?it.length.toFixed(1):'',it.diameter||'',it.desc||'']);
+    });
+  }else{
+    ws=[['النوع','رقم الاشتراك','الاسم','الهاتف','العنوان','خط العرض','خط الطول','الارتفاع (م)','فرق عن الأدنى (م)','ملاحظات']];
+    data.forEach(function(it){
+      var tl=typeLabels[it.type]||'';
+      var diff='';
+      if(it.alt!==null){var mn=getLowestInHood(it.lng,it.lat);if(mn!==null)diff=(it.alt-mn).toFixed(1);}
+      ws.push([tl,it.subId||'',it.name||'',it.phone||'',it.address||'',it.lat.toFixed(6),it.lng.toFixed(6),it.alt!==null?it.alt.toFixed(1):'',diff,it.desc||'']);
+    });
+  }
+  var wb=XLSX.utils.book_new();
+  var wsht=XLSX.utils.aoa_to_sheet(ws);
+  wsht['!cols']=isLineData?[{wch:20},{wch:15},{wch:15},{wch:15},{wch:25}]:[{wch:15},{wch:15},{wch:15},{wch:15},{wch:20},{wch:14},{wch:14},{wch:12},{wch:14},{wch:25}];
+  XLSX.utils.book_append_sheet(wb,wsht,'البيانات');
+  var out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  var b=new Blob([out],{type:'application/octet-stream'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='مشتركين_المياه.xlsx';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  mc('exportModal');tt('✅ تم تصدير '+data.length+' سجل','ok');
+}
+
+// ===== CLEAR =====
+function ca(){
+  if(!subs.length&&!pumps.length&&!hoods.length&&!tanks.length&&!manholes.length&&!waterlines.length&&!sewerlines.length&&!gravitylines.length&&!complaints.length){tt('لا توجد بيانات','inf');return;}
+  if(!confirm('مسح الكل؟'))return;
+  SL.clearLayers();PL.clearLayers();IL.clearLayers();KL.clearLayers();TL.clearLayers();MHL.clearLayers();WTL.clearLayers();STL.clearLayers();GTL.clearLayers();CL.clearLayers();DI.clearLayers();
+  subs=[];pumps=[];hoods=[];tanks=[];manholes=[];waterlines=[];sewerlines=[];gravitylines=[];complaints=[];
+  autoSave();ui();tt('🗑️ تم المسح','inf');
+}
+
+// ===== SAMPLE DATA =====
+function sd(){
+  [{lat:32.3480,lng:35.7505,name:'دور ضخ عجلون'},{lat:32.3610,lng:35.7430,name:'دور ضخ عنجرة'},{lat:32.3360,lng:35.7280,name:'دور ضخ صخرة'},{lat:32.3550,lng:35.7700,name:'دور ضخ عبين'},{lat:32.3300,lng:35.7350,name:'دور ضخ عين جنا'}].forEach(function(p){ap(p.lat,p.lng,p.name,'دور ضخ مياه','pumps',780+Math.random()*40);});
+  [{lat:32.3440,lng:35.7460,name:'نظارة عجلون'},{lat:32.3580,lng:35.7560,name:'نظارة عنجرة'}].forEach(function(p){ap(p.lat,p.lng,p.name,'نقطة نظارة','inspection',800+Math.random()*30);});
+  [{lat:32.3520,lng:35.7400,name:'توقف ضخ عجلون'}].forEach(function(p){ap(p.lat,p.lng,p.name,'مطلوب صيانة','pumpstop',790);});
+  [{lat:32.3460,lng:35.7480,name:'خزان عجلون الرئيسي'},{lat:32.3620,lng:35.7450,name:'خزان عنجرة'}].forEach(function(p){ap(p.lat,p.lng,p.name,'خزان أرضي','tank',850+Math.random()*30);});
+  [{lat:32.3490,lng:35.7490,name:'منهول ١'},{lat:32.3510,lng:35.7510,name:'منهول ٢'},{lat:32.3470,lng:35.7470,name:'منهول ٣'}].forEach(function(p){ap(p.lat,p.lng,p.name,'','manhole',790+Math.random()*20);});
+  addLine([[32.348,35.750],[32.349,35.752],[32.350,35.751]],'خط مياه رئيسي',150,'قطر ٦ بوصة','waterline');
+  addLine([[32.344,35.746],[32.345,35.748],[32.347,35.750]],'خط صرف صحي',100,'','sewerline');
+  for(var i=0;i<30;i++){var la=32.340+Math.random()*0.03,lg=35.735+Math.random()*0.04;ap(la,lg,'مشترك '+(i+1),'','subscribers',750+Math.random()*80,'SUB-'+(1000+i));}
+  cc();ui();tt('✅ تم تحميل بيانات تجريبية شاملة','ok');
+}
+
+// ===== CENTER MAP =====
+function cc(){
+  if(!MI)return;
+  var all=[];
+  subs.forEach(function(s){all.push([s.lat,s.lng]);});
+  pumps.forEach(function(p){all.push([p.lat,p.lng]);});
+  tanks.forEach(function(t){if(t.lat)all.push([t.lat,t.lng]);});
+  manholes.forEach(function(m){if(m.lat)all.push([m.lat,m.lng]);});
+  if(all.length>0)MI.fitBounds(L.latLngBounds(all),{padding:[50,50],maxZoom:15});
+  else MI.setView([32.3499,35.7483],13);
+}
+
+// ===== PERSISTENT SAVE/LOAD =====
+var saveTimer=null;
+function saveData(){
+  try{
+    var data={
+      subs:subs.map(function(s){return {id:s.id,lat:s.lat,lng:s.lng,name:s.name,desc:s.desc,alt:s.alt,phone:s.phone,address:s.address,subId:s.subId};}),
+      pumps:pumps.map(function(p){return {id:p.id,lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,capacity:p.capacity,type:p.type};}),
+      tanks:tanks.map(function(t){return {id:t.id,lat:t.lat,lng:t.lng,name:t.name,desc:t.desc,alt:t.alt};}),
+      manholes:manholes.map(function(m){return {id:m.id,lat:m.lat,lng:m.lng,name:m.name,desc:m.desc,alt:m.alt};}),
+      waterlines:waterlines.map(function(l){return {id:l.id,name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc};}),
+      sewerlines:sewerlines.map(function(l){return {id:l.id,name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc};}),
+      gravitylines:gravitylines.map(function(l){return {id:l.id,name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc};}),
+      complaints:complaints.map(function(c){return {id:c.id,lat:c.lat,lng:c.lng,name:c.name,desc:c.desc,alt:c.alt};}),
+      hoods:[]
+    };
+    if(DI)DI.eachLayer(function(l){
+      if(l._hoodId){
+        var h=hoods.find(function(x){return x.id===l._hoodId;});
+        if(h){
+          var coords=[];var ll=l.getLatLngs();
+          if(ll.length>0)coords=ll[0].map(function(c){return [c.lat,c.lng];});
+          data.hoods.push({id:h.id,name:h.name,color:h.color,coords:coords});
+        }
+      }
+    });
+    localStorage.setItem('wpm_data',JSON.stringify(data));
+    localStorage.setItem('wpm_last_sync',new Date().toISOString());
+    setTimeout(syncToCloud,100);
+  }catch(e){tt('⚠️ فشل الحفظ: سعة التخزين ممتلئة','err');}
+}
+function autoSave(){
+  if(saveTimer)clearTimeout(saveTimer);
+  saveTimer=setTimeout(saveData,300);
+}
+
+// ===== SYNC VIA SUPABASE (internet sync) =====
+var SUPABASE_URL='https://qeqyehggxrhhdmboefxv.supabase.co';
+var SUPABASE_KEY='sb_publishable_mAxJqHMlfn7oVWiUENKksA_lIH7wgXv';
+function syncToCloud(){
+  try{
+    var raw=localStorage.getItem('wpm_data');
+    if(!raw)return;
+    var data=JSON.parse(raw);
+    var body=JSON.stringify({id:1,date:new Date().toISOString(),data:data});
+    var x=new XMLHttpRequest();
+    x.open('POST',SUPABASE_URL+'/rest/v1/wpm_data',true);
+    x.setRequestHeader('Content-Type','application/json');
+    x.setRequestHeader('apikey',SUPABASE_KEY);
+    x.setRequestHeader('Authorization','Bearer '+SUPABASE_KEY);
+    x.setRequestHeader('Prefer','resolution=merge-duplicates');
+    x.onerror=function(){console.log('syncToCloud network error')};
+    x.onload=function(){if(x.status>=200&&x.status<300)console.log('syncToCloud OK');else console.log('syncToCloud status '+x.status)};
+    x.send(body);
+  }catch(e){console.log('syncToCloud error',e)}
+}
+function pullFromCloud(){
+  try{
+    var x=new XMLHttpRequest();
+    x.open('GET',SUPABASE_URL+'/rest/v1/wpm_data?id=eq.1',true);
+    x.setRequestHeader('apikey',SUPABASE_KEY);
+    x.setRequestHeader('Authorization','Bearer '+SUPABASE_KEY);
+    x.onload=function(){
+      if(x.status!==200){console.log('pullFromCloud status '+x.status);return;}
+      try{
+        var rows=JSON.parse(x.responseText);
+        if(!rows||!rows.length){console.log('pullFromCloud empty');return;}
+        var r=rows[0];
+        if(!r||!r.data||!r.date){console.log('pullFromCloud invalid row');return;}
+        var local=localStorage.getItem('wpm_last_sync');
+        if(local&&r.date<=local){console.log('pullFromCloud no newer');return;}
+        console.log('pullFromCloud got new data from '+r.date);
+        localStorage.setItem('wpm_data',JSON.stringify(r.data));
+        localStorage.setItem('wpm_last_sync',r.date);
+        if(document.querySelector('.leaflet-container'))location.reload();
+      }catch(e){console.log('pullFromCloud parse error',e)}
+    };
+    x.onerror=function(){console.log('pullFromCloud network error')};
+    x.send();
+  }catch(e){console.log('pullFromCloud error',e)}
+}
+// Pull on load, then every 15 seconds; push on every save
+setTimeout(pullFromCloud,1000);
+setInterval(pullFromCloud,15000);
+
+function loadSavedData(){
+  try{
+    var raw=localStorage.getItem('wpm_data');
+    if(!raw)return;
+    var data=JSON.parse(raw);
+    var count=0;
+    if(data.subs)data.subs.forEach(function(s){
+      var m=ap(s.lat,s.lng,s.name,s.desc,'subscribers',s.alt,s.subId||'');
+      var pt=subs[subs.length-1];if(pt){pt.phone=s.phone;pt.address=s.address;pt.alt=s.alt;pt.subId=s.subId||'';}
+      count++;
+    });
+    if(data.pumps)data.pumps.forEach(function(p){
+      var t=p.type||'pumps';
+      ap(p.lat,p.lng,p.name,p.desc,t,p.alt);
+    });
+    if(data.tanks)data.tanks.forEach(function(t){ap(t.lat,t.lng,t.name||'',t.desc||'','tank',t.alt);});
+    if(data.manholes)data.manholes.forEach(function(m){ap(m.lat,m.lng,m.name||'',m.desc||'','manhole',m.alt);});
+    if(data.waterlines)data.waterlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','waterline');});
+    if(data.sewerlines)data.sewerlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','sewerline');});
+    if(data.gravitylines)data.gravitylines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','gravityline');});
+    if(data.complaints)data.complaints.forEach(function(c){ap(c.lat,c.lng,c.name||'',c.desc||'','complaint',c.alt);});
+    if(data.hoods)data.hoods.forEach(function(h){
+      if(!h.coords||h.coords.length<3)return;
+      var latlngs=h.coords.map(function(c){return [c[0],c[1]];});
+      var poly=L.polygon(latlngs,{color:h.color||'#3366FF',fillColor:h.color||'#3366FF',fillOpacity:0.12,weight:3});
+      poly._hoodId=h.id;
+      DI.addLayer(poly);
+      var center=poly.getBounds().getCenter();
+      var label=L.marker(center,{
+        icon:L.divIcon({className:'',html:'<div class="neighborhood-label">'+h.name+'</div>',iconSize:[0,0],iconAnchor:[0,0]}),
+        zIndexOffset:1000
+      });
+      label._hoodId=h.id;
+      DI.addLayer(label);
+      hoods.push({id:h.id,name:h.name,color:h.color||'#3366FF',layer:poly,label:label});
+    });
+    if(count>0){cc();tt('تم استعادة '+count+' مشترك من الحفظ التلقائي','ok');}
+    ui();
+  }catch(e){}
+}
+
+// ===== BACKUP =====
+function exportBackup(){
+  var data={
+    version:1,
+    date:new Date().toISOString(),
+    subs:subs.map(function(s){return {lat:s.lat,lng:s.lng,name:s.name,desc:s.desc,alt:s.alt,phone:s.phone,address:s.address,subId:s.subId};}),
+    pumps:pumps.map(function(p){return {lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,type:p.type};}),
+    tanks:tanks.map(function(t){return {lat:t.lat,lng:t.lng,name:t.name,desc:t.desc,alt:t.alt};}),
+    manholes:manholes.map(function(m){return {lat:m.lat,lng:m.lng,name:m.name,desc:m.desc,alt:m.alt};}),
+    waterlines:waterlines.map(function(l){return {name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc};}),
+    sewerlines:sewerlines.map(function(l){return {name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc};}),
+    gravitylines:gravitylines.map(function(l){return {name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc};}),
+    complaints:complaints.map(function(c){return {lat:c.lat,lng:c.lng,name:c.name,desc:c.desc,alt:c.alt};}),
+    hoods:[]
+  };
+  if(DI)DI.eachLayer(function(l){
+    if(l._hoodId){
+      var h=hoods.find(function(x){return x.id===l._hoodId;});
+      if(h){var coords=[];var ll=l.getLatLngs();if(ll.length>0)coords=ll[0].map(function(c){return [c.lat,c.lng];});data.hoods.push({name:h.name,color:h.color,coords:coords});}
+    }
+  });
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='مشتركين_المياه_نسخة_احتياطية.json';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  tt('✅ تم تصدير النسخة الاحتياطية','ok');
+  mc('backupModal');
+}
+
+// ===== EXPORT ONE HOOD =====
+function exportOneHood(hid){
+  var h=hoods.find(function(x){return x.id===hid;});
+  if(!h||!h.layer){tt('الحي غير موجود','err');return;}
+  var ll=h.layer.getLatLngs();if(!ll.length)return;
+  var verts=ll[0].map(function(c){return [c.lng,c.lat];});
+  var insideSubs=[],insidePumps=[],insideTanks=[],insideMHs=[],insideWL=[],insideSL=[];
+  subs.forEach(function(s){try{if(ptInPoly(s.lng,s.lat,verts))insideSubs.push({lat:s.lat,lng:s.lng,name:s.name,desc:s.desc,alt:s.alt,phone:s.phone,address:s.address,subId:s.subId});}catch(e){}});
+  pumps.forEach(function(p){try{if(ptInPoly(p.lng,p.lat,verts))insidePumps.push({lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,type:p.type||'pumps',capacity:p.capacity});}catch(e){}});
+  tanks.forEach(function(t){try{if(ptInPoly(t.lng,t.lat,verts))insideTanks.push({lat:t.lat,lng:t.lng,name:t.name,desc:t.desc,alt:t.alt});}catch(e){}});
+  manholes.forEach(function(m){try{if(ptInPoly(m.lng,m.lat,verts))insideMHs.push({lat:m.lat,lng:m.lng,name:m.name,desc:m.desc,alt:m.alt});}catch(e){}});
+  waterlines.forEach(function(l){try{if(l.coords&&l.coords.length&&ptInPoly(l.coords[0][1],l.coords[0][0],verts))insideWL.push({name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc});}catch(e){}});
+  sewerlines.forEach(function(l){try{if(l.coords&&l.coords.length&&ptInPoly(l.coords[0][1],l.coords[0][0],verts))insideSL.push({name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc});}catch(e){}});
+  var insideGL=[];
+  gravitylines.forEach(function(l){try{if(l.coords&&l.coords.length&&ptInPoly(l.coords[0][1],l.coords[0][0],verts))insideGL.push({name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc});}catch(e){}});
+  var insideComp=[];
+  complaints.forEach(function(c){try{if(ptInPoly(c.lng,c.lat,verts))insideComp.push({lat:c.lat,lng:c.lng,name:c.name,desc:c.desc,alt:c.alt});}catch(e){}});
+  var data={version:1,date:new Date().toISOString(),hood:{name:h.name,color:h.color,coords:ll[0].map(function(c){return [c.lat,c.lng];})},subs:insideSubs,pumps:insidePumps,tanks:insideTanks,manholes:insideMHs,waterlines:insideWL,sewerlines:insideSL,gravitylines:insideGL,complaints:insideComp};
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='حي_'+h.name+'.json';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  tt('✅ تم تصدير '+h.name,'ok');
+}
+// ===== EXPORT EACH HOOD AS FILE =====
+function exportAllHoods(){
+  if(!hoods.length){tt('لا توجد أحياء للتصدير','inf');return;}
+  hoods.forEach(function(h){
+    if(!h.layer)return;
+    var ll=h.layer.getLatLngs();
+    if(!ll.length)return;
+    var verts=ll[0].map(function(c){return [c.lng,c.lat];});
+    // Find subs inside
+    var insideSubs=[];
+    subs.forEach(function(s){
+      var inside=false;
+      try{inside=ptInPoly(s.lng,s.lat,verts);}catch(e){}
+      if(inside)insideSubs.push({lat:s.lat,lng:s.lng,name:s.name,desc:s.desc,alt:s.alt,phone:s.phone,address:s.address,subId:s.subId});
+    });
+    // Find pumps, tanks, manholes inside
+    var insidePumps=[],insideTanks=[],insideMHs=[],insideWL=[],insideSL=[];
+    pumps.forEach(function(p){try{if(ptInPoly(p.lng,p.lat,verts))insidePumps.push({lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,type:p.type||'pumps'});}catch(e){}});
+    tanks.forEach(function(t){try{if(ptInPoly(t.lng,t.lat,verts))insideTanks.push({lat:t.lat,lng:t.lng,name:t.name,desc:t.desc,alt:t.alt});}catch(e){}});
+    manholes.forEach(function(m){try{if(ptInPoly(m.lng,m.lat,verts))insideMHs.push({lat:m.lat,lng:m.lng,name:m.name,desc:m.desc,alt:m.alt});}catch(e){}});
+    waterlines.forEach(function(l){try{if(l.coords&&l.coords.length&&ptInPoly(l.coords[0][1],l.coords[0][0],verts))insideWL.push({name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc});}catch(e){}});
+    sewerlines.forEach(function(l){try{if(l.coords&&l.coords.length&&ptInPoly(l.coords[0][1],l.coords[0][0],verts))insideSL.push({name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc});}catch(e){}});
+    var insideGL=[];
+    gravitylines.forEach(function(l){try{if(l.coords&&l.coords.length&&ptInPoly(l.coords[0][1],l.coords[0][0],verts))insideGL.push({name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc});}catch(e){}});
+    var insideComp=[];
+    complaints.forEach(function(c){try{if(ptInPoly(c.lng,c.lat,verts))insideComp.push({lat:c.lat,lng:c.lng,name:c.name,desc:c.desc,alt:c.alt});}catch(e){}});
+    var saveCoords=ll[0].map(function(c){return [c.lat,c.lng];});
+    var data={
+      version:1,date:new Date().toISOString(),
+      hood:{name:h.name,color:h.color,coords:saveCoords},
+      subs:insideSubs,pumps:insidePumps,tanks:insideTanks,manholes:insideMHs,waterlines:insideWL,sewerlines:insideSL,gravitylines:insideGL,complaints:insideComp
+    };
+    var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='حي_'+h.name+'.json';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+  });
+  mc('neighborhoodsModal');tt('✅ تم تصدير '+hoods.length+' حي','ok');
+}
+// ===== IMPORT HOOD FILES =====
+function importHoodFiles(files){
+  if(!files.length)return;
+  var cnt=0;
+  function processFile(i){
+    if(i>=files.length){tt('✅ تم استيراد '+cnt+' حي','ok');mc('neighborhoodsModal');return;}
+    var r=new FileReader();
+    r.onload=function(e){
+      try{
+        var data=JSON.parse(e.target.result);
+        if(!data.hood||!data.hood.coords||data.hood.coords.length<3){tt('ملف '+files[i].name+' غير صالح','err');processFile(i+1);return;}
+        // Add hood polygon
+        var id=Date.now().toString(36)+Math.random().toString(36).substr(2,4);
+        var latlngs=data.hood.coords;
+        var poly=L.polygon(latlngs,{color:data.hood.color||'#3366FF',fillColor:data.hood.color||'#3366FF',fillOpacity:0.12,weight:3});
+        poly._hoodId=id;DI.addLayer(poly);
+        var center=poly.getBounds().getCenter();
+        var label=L.marker(center,{icon:L.divIcon({className:'',html:'<div class="neighborhood-label">'+data.hood.name+'</div>',iconSize:[0,0],iconAnchor:[0,0]}),zIndexOffset:1000});
+        label._hoodId=id;DI.addLayer(label);
+        hoods.push({id:id,name:data.hood.name,color:data.hood.color||'#3366FF',layer:poly,label:label});
+        if(data.subs)data.subs.forEach(function(s){ap(s.lat,s.lng,s.name||'',s.desc||'','subscribers',s.alt,s.subId||'');var pt=subs[subs.length-1];if(pt){pt.phone=s.phone||'';pt.address=s.address||'';}cnt++;});
+        if(data.pumps)data.pumps.forEach(function(p){ap(p.lat,p.lng,p.name||'',p.desc||'',p.type||'pumps',p.alt);cnt++;});
+        if(data.tanks)data.tanks.forEach(function(t){ap(t.lat,t.lng,t.name||'',t.desc||'','tank',t.alt);cnt++;});
+        if(data.manholes)data.manholes.forEach(function(m){ap(m.lat,m.lng,m.name||'',m.desc||'','manhole',m.alt);cnt++;});
+        if(data.waterlines)data.waterlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','waterline');cnt++;});
+        if(data.sewerlines)data.sewerlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','sewerline');cnt++;});
+        if(data.gravitylines)data.gravitylines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','gravityline');cnt++;});
+        if(data.complaints)data.complaints.forEach(function(c){ap(c.lat,c.lng,c.name||'',c.desc||'','complaint',c.alt);cnt++;});
+        cnt++;
+      }catch(e){tt('خطأ في ملف '+files[i].name,'err');}
+      processFile(i+1);
+    };
+    r.readAsText(files[i]);
+  }
+  processFile(0);
+}
+
+function importBackup(files){
+  if(!files.length)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    try{
+      var data=JSON.parse(e.target.result);
+      if(!data.subs&&!data.pumps){tt('ملف غير صالح','err');return;}
+      if(!confirm('هل تريد استيراد النسخة؟ (سيتم إضافة البيانات للموجودة)'))return;
+      var cnt=0;
+      if(data.subs)data.subs.forEach(function(s){ap(s.lat,s.lng,s.name||'',s.desc||'','subscribers',s.alt,s.subId||'');var pt=subs[subs.length-1];if(pt){pt.phone=s.phone||'';pt.address=s.address||'';pt.subId=s.subId||'';}cnt++;});
+      if(data.pumps)data.pumps.forEach(function(p){ap(p.lat,p.lng,p.name||'',p.desc||'',p.type||'pumps',p.alt);cnt++;});
+      if(data.tanks)data.tanks.forEach(function(t){ap(t.lat,t.lng,t.name||'',t.desc||'','tank',t.alt);cnt++;});
+      if(data.manholes)data.manholes.forEach(function(m){ap(m.lat,m.lng,m.name||'',m.desc||'','manhole',m.alt);cnt++;});
+      if(data.waterlines)data.waterlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','waterline');cnt++;});
+      if(data.sewerlines)data.sewerlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','sewerline');cnt++;});
+      if(data.gravitylines)data.gravitylines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','gravityline');cnt++;});
+      if(data.complaints)data.complaints.forEach(function(c){ap(c.lat,c.lng,c.name||'',c.desc||'','complaint',c.alt);cnt++;});
+      if(data.hoods)data.hoods.forEach(function(h){
+        if(!h.coords||h.coords.length<3)return;
+        var id=Date.now().toString(36)+Math.random().toString(36).substr(2,4);
+        var latlngs=h.coords.map(function(c){return [c[0],c[1]];});
+        var poly=L.polygon(latlngs,{color:h.color||'#3366FF',fillColor:h.color||'#3366FF',fillOpacity:0.12,weight:3});
+        poly._hoodId=id;DI.addLayer(poly);
+        var label=L.marker(poly.getBounds().getCenter(),{icon:L.divIcon({className:'',html:'<div class="neighborhood-label">'+h.name+'</div>',iconSize:[0,0],iconAnchor:[0,0]}),zIndexOffset:1000});
+        label._hoodId=id;DI.addLayer(label);
+        hoods.push({id:id,name:h.name,color:h.color||'#3366FF',layer:poly,label:label});
+      });
+      if(cnt>0)cc();
+      ui();
+      saveData();
+      tt('✅ تم استيراد '+cnt+' سجل من النسخة','ok');
+    }catch(e){tt('خطأ في قراءة الملف','err');}
+    mc('backupModal');
+  };
+  r.readAsText(files[0]);
+}
+
+// ===== WHATSAPP POPUP =====
+function waPopup(id){waSub(id);}
+function waPopupLine(id,type){
+  var arr=type==='waterline'?waterlines:type==='gravityline'?gravitylines:sewerlines;
+  var l=arr.find(function(x){return x.id===id;});
+  if(!l||!l.coords||l.coords.length<2)return;
+  var label=type==='waterline'?'🔵 خط مياه':type==='gravityline'?'🟣 مسارات الجباه':'🟤 خط صرف صحي';
+  var name=encodeURIComponent(l.name||label);
+  var first=l.coords[0],last=l.coords[l.coords.length-1];
+  var start='https://maps.google.com/maps?q='+first[0]+','+first[1];
+  var end='https://maps.google.com/maps?q='+last[0]+','+last[1];
+  var len=' طول: '+l.length.toFixed(1)+' م';
+  var diam=l.diameter?' قطر: '+l.diameter+' مم':'';
+  window.open('https://wa.me/?text='+name+len+diam+'%0a🟢 بداية: '+start+'%0a🔴 نهاية: '+end,'_blank');
+}
+function waPopupPump(id){
+  var s=pumps.find(function(x){return x.id===id;})||tanks.find(function(x){return x.id===id;})||manholes.find(function(x){return x.id===id;});
+  if(!s)return;
+  var label=s.name||'نقطة';
+  if(tanks.find(function(x){return x.id===id;}))label='🚰 '+(s.name||'خزان');
+  else if(manholes.find(function(x){return x.id===id;}))label='🕳️ '+(s.name||'منهول');
+  else if(s.type==='inspection')label='👁️ '+(s.name||'نظارة');
+  else if(s.type==='pumpstop')label='⛔ '+(s.name||'توقف ضخ');
+  else label='🏭 '+(s.name||'دور ضخ');
+  var name=encodeURIComponent(label);
+  var lat=s.lat.toFixed(6),lng=s.lng.toFixed(6);
+  var alt=s.alt!==null?' ارتفاع: '+s.alt.toFixed(1)+' م':'';
+  window.open('https://wa.me/?text='+name+'%0a📍 https://maps.google.com/maps?q='+lat+','+lng+alt,'_blank');
+}
+
+// ===== COMPLAINT FROM WHATSAPP =====
+function useMapCenter(){
+  var c=MI.getCenter();
+  document.getElementById('compCoordInput').value=c.lat.toFixed(6)+', '+c.lng.toFixed(6);
+}
+function addComplaint(){
+  var inp=document.getElementById('compCoordInput').value.trim();
+  var desc=document.getElementById('compDesc').value.trim();
+  if(!inp){tt('الرجاء إدخال رابط أو إحداثيات','err');return;}
+  // Parse coordinates from Google Maps URL or plain coords
+  var lat,lng;
+  var gm=inp.match(/maps\.google\.com\/maps\?q=([-\d.]+),([-\d.]+)/);
+  if(gm){lat=parseFloat(gm[1]);lng=parseFloat(gm[2]);}
+  else{
+    var parts=inp.split(/[,;\s]+/).filter(Boolean);
+    if(parts.length>=2){lat=parseFloat(parts[0]);lng=parseFloat(parts[1]);}
+  }
+  if(isNaN(lat)||isNaN(lng)){tt('خطأ في قراءة الإحداثيات','err');return;}
+  var now=new Date();
+  var dateStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  var compName='بلاغ '+dateStr;
+  ap(lat,lng,compName,desc||'بلاغ صيانة','complaint',null);
+  cc();saveData();mc('complaintModal');
+  document.getElementById('compCoordInput').value='';document.getElementById('compDesc').value='';
+  tt('📋 تم إضافة بلاغ الصيانة','ok');
+}
+
+// ===== SEARCH =====
+function searchSubs(q){
+  q=q.trim().toLowerCase();
+  var el=document.getElementById('searchResults');
+  if(!q){el.innerHTML='<p style="color:#888;text-align:center;padding:20px">اكتب اسم للبحث</p>';return;}
+  // Search subscribers
+  var results=subs.filter(function(s){return s.name.toLowerCase().includes(q)||(s.phone||'').includes(q)||(s.address||'').toLowerCase().includes(q)||(s.subId||'').includes(q);});
+  // Search neighborhoods
+  var hoodResults=hoods.filter(function(h){return h.name.toLowerCase().includes(q);});
+  var pumpResults=pumps.filter(function(p){return p.name.toLowerCase().includes(q);});
+  var tankResults=tanks.filter(function(t){return t.name.toLowerCase().includes(q);});
+  var mhResults=manholes.filter(function(m){return m.name.toLowerCase().includes(q);});
+  
+  if(results.length===0&&hoodResults.length===0&&pumpResults.length===0&&tankResults.length===0&&mhResults.length===0){el.innerHTML='<p style="color:#888;text-align:center;padding:20px">لا توجد نتائج</p>';return;}
+  var html='';
+  if(hoodResults.length>0){
+    html+='<p style="color:#FFD54F;font-size:12px;margin:8px 0 4px;font-weight:700">🏘️ الأحياء</p>';
+    hoodResults.forEach(function(h){
+      // Count subscribers inside
+      var cnt=0;
+      try{
+        var ll=h.layer.getLatLngs();
+        if(ll.length>0){var verts=ll[0].map(function(c){return [c.lng,c.lat];});subs.forEach(function(s){if(ptInPoly(s.lng,s.lat,verts))cnt++;});}
+      }catch(e){}
+      html+='<div class="search-item" style="border-right:4px solid '+(h.color||'#3366FF')+'">';
+      html+='<div class="info"><div class="name">'+h.name+'</div><div class="detail">👥 '+cnt+' مشترك</div></div>';
+      html+='<div class="actions"><button class="loc-btn" onclick="goToHood(\''+h.id+'\')" title="عرض الحي">📍</button></div></div>';
+    });
+  }
+  function addSearchSection(arr,icon,label,clickFn,waFn){
+    if(!arr.length)return;
+    html+='<p style="color:#FFD54F;font-size:12px;margin:8px 0 4px;font-weight:700">'+icon+' '+label+'</p>';
+    arr.forEach(function(p){
+      html+='<div class="search-item">';
+      html+='<div class="info"><div class="name">'+icon+' '+p.name+'</div><div class="detail">'+(p.desc||'')+'</div></div>';
+      html+='<div class="actions"><button class="loc-btn" onclick="'+clickFn+'(\''+p.id+'\')" title="عرض">📍</button><button class="wa-btn" onclick="'+waFn+'(\''+p.id+'\')" title="واتساب">📱</button></div></div>';
+    });
+  }
+  addSearchSection(pumpResults,'📍','المواقع','goToSub','waPopupPump');
+  addSearchSection(tankResults,'🚰','خزانات','goToSub','waPopupPump');
+  addSearchSection(mhResults,'🕳️','مناهل','goToSub','waPopupPump');
+  if(results.length>0){
+    html+='<p style="color:#42A5F5;font-size:12px;margin:8px 0 4px;font-weight:700">👥 المشتركين ('+results.length+')</p>';
+    results.forEach(function(s){
+      html+='<div class="search-item">';
+      html+='<div class="info"><div class="name">'+s.name+'</div><div class="detail">'+(s.subId?'🔢 '+s.subId:'')+(s.phone?' | 📞 '+s.phone:'')+(s.address?' | '+s.address:'')+'</div></div>';
+      html+='<div class="actions">';
+      html+='<button class="loc-btn" onclick="goToSub(\''+s.id+'\')" title="عرض">📍</button>';
+      html+='<button class="wa-btn" onclick="waSub(\''+s.id+'\')" title="واتساب">📱</button>';
+      html+='</div></div>';
+    });
+  }
+  el.innerHTML=html;
+}
+function goToSub(id){
+  var s=subs.find(function(x){return x.id===id;})||pumps.find(function(x){return x.id===id;})||tanks.find(function(x){return x.id===id;})||manholes.find(function(x){return x.id===id;});
+  if(s&&MI){MI.setView([s.lat,s.lng],17);mc('searchModal');tt('📍 '+s.name,'inf');}
+}
+function goToHood(id){
+  var h=hoods.find(function(x){return x.id===id;});
+  if(h&&MI&&h.layer){
+    MI.fitBounds(h.layer.getBounds(),{padding:[50,50],maxZoom:16});
+    mc('searchModal');
+    // Highlight the polygon
+    h.layer.setStyle({weight:5,fillOpacity:0.2});
+    var _id=id;
+    setTimeout(function(){
+      var hh=hoods.find(function(x){return x.id===_id;});
+      if(hh&&hh.layer)hh.layer.setStyle({weight:3,fillOpacity:0.12});
+    },3000);
+    tt('🏘️ '+h.name,'inf');
+  }
+}
+function waSub(id){
+  var s=subs.find(function(x){return x.id===id;});
+  if(!s)return;
+  var name=encodeURIComponent(s.name||'مشترك');
+  var lat=s.lat.toFixed(6);
+  var lng=s.lng.toFixed(6);
+  var phone=s.phone?' هاتف: '+s.phone:'';
+  var addr=s.address?' عنوان: '+s.address:'';
+  var subId=s.subId?' رقم اشتراك: '+s.subId:'';
+  var msg=name+'%0a📍 https://maps.google.com/maps?q='+lat+','+lng+subId+phone+addr;
+  window.open('https://wa.me/?text='+msg,'_blank');
+}
+
+// ===== CROSSHAIR =====
+var crosshairEl=null;
+function showCrosshair(){
+  if(crosshairEl)return;
+  crosshairEl=document.createElement('div');
+  crosshairEl.id='crosshair-overlay';
+  crosshairEl.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;pointer-events:none';
+  crosshairEl.innerHTML='<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)"><div style="position:absolute;top:-18px;left:-1.5px;width:3px;height:36px;background:rgba(66,165,245,.8);box-shadow:0 0 4px rgba(66,165,245,.4)"></div><div style="position:absolute;top:-1.5px;left:-18px;width:36px;height:3px;background:rgba(66,165,245,.8);box-shadow:0 0 4px rgba(66,165,245,.4)"></div><div style="position:absolute;top:-5px;left:-5px;width:10px;height:10px;border-radius:50%;border:2px solid rgba(66,165,245,.6)"></div></div>';
+  document.body.appendChild(crosshairEl);
+}
+function hideCrosshair(){
+  if(crosshairEl&&crosshairEl.parentNode)crosshairEl.parentNode.removeChild(crosshairEl);
+  crosshairEl=null;
+}
+
+// ===== STATISTICS =====
+function showStats(){
+  var html='';
+  // Count all types
+  function lineStats(arr,icon,label){
+    if(!arr.length)return;
+    var totalLen=0,diams={};
+    arr.forEach(function(l){totalLen+=l.length||0;var d=l.diameter;if(d){var k=d+'مم';diams[k]=(diams[k]||0)+1;}});
+    html+='<div style="margin-bottom:10px;padding:8px;background:rgba(255,255,255,.05);border-radius:6px">';
+    html+='<b>'+icon+' '+label+'</b> — '+arr.length+' خط | طول: '+totalLen.toFixed(1)+' م';
+    if(Object.keys(diams).length){
+      html+='<br><span style="color:#aaa;font-size:11px">الأقطار: ';
+      var first=true;
+      for(var k in diams){if(!first)html+=' · ';html+=k+': '+diams[k];first=false;}
+      html+='</span>';
+    }
+    html+='</div>';
+  }
+  function pointStats(arr,icon,label){
+    if(!arr.length)return;
+    html+='<div style="margin-bottom:10px;padding:8px;background:rgba(255,255,255,.05);border-radius:6px">';
+    html+='<b>'+icon+' '+label+'</b> — '+arr.length+' نقطة</div>';
+  }
+  pointStats(subs,'👥','مشتركين');
+  lineStats(waterlines,'🔵','شبكة مياه');
+  lineStats(sewerlines,'🟤','شبكة صرف صحي');
+  lineStats(gravitylines,'🟣','مسارات الجباه');
+  pointStats(pumps,'🏭','دور ضخ');
+  pointStats(tanks,'🚰','خزانات مياه');
+  pointStats(manholes,'🕳️','مناهل صرف صحي');
+  pointStats(pumps.filter(function(p){return p.type==='inspection';}),'👁️','نظارة');
+  pointStats(pumps.filter(function(p){return p.type==='pumpstop';}),'⛔','توقف ضخ');
+  pointStats(complaints,'📋','بلاغات صيانة');
+  // Per-hood stats
+  if(hoods.length){
+    html+='<hr style="border-color:rgba(255,255,255,.1);margin:10px 0"><b style="font-size:14px">🏘️ حسب الأحياء</b>';
+    hoods.forEach(function(h){
+      if(!h.layer)return;
+      var ll=h.layer.getLatLngs();if(!ll.length)return;
+      var verts=ll[0].map(function(c){return [c.lng,c.lat];});
+      var subsIn=0,wlLen=0,slLen=0,glLen=0,mhCnt=0,tkCnt=0,compCnt=0;
+      subs.forEach(function(s){try{if(ptInPoly(s.lng,s.lat,verts))subsIn++;}catch(e){}});
+      waterlines.forEach(function(l){try{if(l.coords&&ptInPoly(l.coords[0][1],l.coords[0][0],verts))wlLen+=l.length||0;}catch(e){}});
+      sewerlines.forEach(function(l){try{if(l.coords&&ptInPoly(l.coords[0][1],l.coords[0][0],verts))slLen+=l.length||0;}catch(e){}});
+      gravitylines.forEach(function(l){try{if(l.coords&&ptInPoly(l.coords[0][1],l.coords[0][0],verts))glLen+=l.length||0;}catch(e){}});
+      manholes.forEach(function(m){try{if(ptInPoly(m.lng,m.lat,verts))mhCnt++;}catch(e){}});
+      tanks.forEach(function(t){try{if(ptInPoly(t.lng,t.lat,verts))tkCnt++;}catch(e){}});
+      complaints.forEach(function(c){try{if(ptInPoly(c.lng,c.lat,verts))compCnt++;}catch(e){}});
+      if(subsIn||wlLen||slLen||glLen||mhCnt||tkCnt||compCnt){
+        html+='<div style="margin:6px 0;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:4px;border-right:3px solid '+(h.color||'#3366FF')+'">';
+        html+='<b style="font-size:12px">'+h.name+'</b>';
+        if(subsIn)html+='<br><span style="color:#aaa;font-size:11px">👥 مشتركين: '+subsIn+'</span>';
+        if(wlLen)html+='<br><span style="color:#29B6F6;font-size:11px">🔵 شبكة مياه: '+wlLen.toFixed(1)+' م</span>';
+        if(slLen)html+='<br><span style="color:#8D6E63;font-size:11px">🟤 صرف صحي: '+slLen.toFixed(1)+' م</span>';
+        if(glLen)html+='<br><span style="color:#AB47BC;font-size:11px">🟣 مسارات الجباه: '+glLen.toFixed(1)+' م</span>';
+        if(mhCnt)html+='<br><span style="color:#A1887F;font-size:11px">🕳️ مناهل: '+mhCnt+'</span>';
+        if(tkCnt)html+='<br><span style="color:#4DD0E1;font-size:11px">🚰 خزانات: '+tkCnt+'</span>';
+        if(compCnt)html+='<br><span style="color:#FF7043;font-size:11px">📋 بلاغات صيانة: '+compCnt+'</span>';
+        html+='</div>';
+      }
+    });
+  }
+  document.getElementById('statsContent').innerHTML=html;
+  mo('statsModal');
+}
+
+// ===== SIDE PANEL =====
+function toggleSidePanel(){
+  var p=document.getElementById('sidePanel');
+  p.classList.toggle('show');
+}
+// Close panel on map click (Leaflet swallows document clicks)
+MI.on('click',function(){
+  var p=document.getElementById('sidePanel');
+  if(p.classList.contains('show'))p.classList.remove('show');
+});
+document.addEventListener('click',function(e){
+  var p=document.getElementById('sidePanel');
+  if(!p.classList.contains('show'))return;
+  if(p.contains(e.target)||e.target.id==='sideToggle')return;
+  p.classList.remove('show');
+});
+function applyFilters(){
+  var showSubs=document.getElementById('chkSubs').checked;
+  var showPumps=document.getElementById('chkPumps').checked;
+  var showInsp=document.getElementById('chkInsp').checked;
+  var showStop=document.getElementById('chkStop').checked;
+  var showTanks=document.getElementById('chkTanks')&&document.getElementById('chkTanks').checked;
+  var showManholes=document.getElementById('chkManholes')&&document.getElementById('chkManholes').checked;
+  var showWaterlines=document.getElementById('chkWaterlines')&&document.getElementById('chkWaterlines').checked;
+  var showSewerlines=document.getElementById('chkSewerlines')&&document.getElementById('chkSewerlines').checked;
+  var showHoods=document.getElementById('chkHoods').checked;
+  if(showSubs&&!MI.hasLayer(SL))MI.addLayer(SL);else if(!showSubs&&MI.hasLayer(SL))MI.removeLayer(SL);
+  if(showPumps&&!MI.hasLayer(PL))MI.addLayer(PL);else if(!showPumps&&MI.hasLayer(PL))MI.removeLayer(PL);
+  if(showInsp&&!MI.hasLayer(IL))MI.addLayer(IL);else if(!showInsp&&MI.hasLayer(IL))MI.removeLayer(IL);
+  if(showStop&&!MI.hasLayer(KL))MI.addLayer(KL);else if(!showStop&&MI.hasLayer(KL))MI.removeLayer(KL);
+  if(showTanks&&!MI.hasLayer(TL))MI.addLayer(TL);else if(!showTanks&&MI.hasLayer(TL))MI.removeLayer(TL);
+  if(showManholes&&!MI.hasLayer(MHL))MI.addLayer(MHL);else if(!showManholes&&MI.hasLayer(MHL))MI.removeLayer(MHL);
+  if(showWaterlines&&!MI.hasLayer(WTL))MI.addLayer(WTL);else if(!showWaterlines&&MI.hasLayer(WTL))MI.removeLayer(WTL);
+  if(showSewerlines&&!MI.hasLayer(STL))MI.addLayer(STL);else if(!showSewerlines&&MI.hasLayer(STL))MI.removeLayer(STL);
+  var showGravity=document.getElementById('chkGravity')&&document.getElementById('chkGravity').checked;
+  if(showGravity&&!MI.hasLayer(GTL))MI.addLayer(GTL);else if(!showGravity&&MI.hasLayer(GTL))MI.removeLayer(GTL);
+  var showComplaints=document.getElementById('chkComplaints')&&document.getElementById('chkComplaints').checked;
+  if(showComplaints&&!MI.hasLayer(CL))MI.addLayer(CL);else if(!showComplaints&&MI.hasLayer(CL))MI.removeLayer(CL);
+  if(DI){if(showHoods&&!MI.hasLayer(DI))MI.addLayer(DI);else if(!showHoods&&MI.hasLayer(DI))MI.removeLayer(DI);}
+}
+
+// ===== LOCATE ME =====
+function locateMe(){
+  if(!navigator.geolocation){tt('الموقع غير مدعوم','err');return;}
+  tt('جاري تحديد الموقع...','inf');
+  showCrosshair();
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      var lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
+      MI.setView([lat,lng],17);
+      tt('🎯 موقعك ('+lat.toFixed(5)+', '+lng.toFixed(5)+') دقة ±'+Math.round(acc)+' م','ok');
+    },
+    function(err){
+      hideCrosshair();
+      var msgs={1:'الرجاء السماح بتحديد الموقع',2:'تعذر',3:'انتهت المهلة'};
+      tt(msgs[err.code]||'خطأ','err');
+    },
+    {enableHighAccuracy:true,timeout:15000,maximumAge:60000}
+  );
+}
+
+// ===== SERVICE WORKER =====
+if('serviceWorker'in navigator)navigator.serviceWorker.register('service-worker.js').catch(function(){});
+loadSavedData();
+hidel();
+</script>
+</body>
+</html>
