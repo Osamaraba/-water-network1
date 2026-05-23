@@ -129,7 +129,7 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 <button class="tool-btn" onclick="fe()"><span>🏔️</span><span class="label">ارتفاعات</span></button>
 <button class="tool-btn" onclick="mo('backupModal')"><span>💾</span><span class="label">حفظ</span></button>
 <button class="tool-btn" onclick="ts()"><span>🗺️</span><span class="label">خرائط</span></button>
-<button class="tool-btn green" onclick="pullFromCloud()" title="مزامنة"><span>☁️</span><span class="label">مزامنة</span></button>
+<button class="tool-btn green" onclick="fullSync()" title="مزامنة"><span>☁️</span><span class="label">مزامنة</span></button>
 <button class="tool-btn" onclick="location.reload()" title="تحديث"><span>🔄</span><span class="label">تحديث</span></button>
 <button class="tool-btn" onclick="mo('aboutModal')"><span>ℹ️</span><span class="label">عن التطبيق</span></button>
 <button class="tool-btn danger" onclick="mo('clearModal')"><span>🗑️</span><span class="label">مسح</span></button>
@@ -1206,7 +1206,6 @@ function saveData(){
       }
     });
     localStorage.setItem('wpm_data',JSON.stringify(data));
-    localStorage.setItem('wpm_last_sync',new Date().toISOString());
     setTimeout(syncToCloud,100);
   }catch(e){tt('⚠️ فشل الحفظ: سعة التخزين ممتلئة','err');}
 }
@@ -1221,19 +1220,40 @@ var SUPABASE_KEY='sb_publishable_mAxJqHMlfn7oVWiUENKksA_lIH7wgXv';
 function syncToCloud(){
   try{
     var raw=localStorage.getItem('wpm_data');
-    if(!raw)return;
+    if(!raw){tt('☁️ لا توجد بيانات للرفع','inf');return;}
     var data=JSON.parse(raw);
-    var body=JSON.stringify({id:1,date:new Date().toISOString(),data:data});
+    var now=new Date().toISOString();
+    var body=JSON.stringify({id:1,date:now,data:data});
     var x=new XMLHttpRequest();
-    x.open('POST',SUPABASE_URL+'/rest/v1/wpm_data',true);
+    x.open('PUT',SUPABASE_URL+'/rest/v1/wpm_data?id=eq.1',true);
     x.setRequestHeader('Content-Type','application/json');
     x.setRequestHeader('apikey',SUPABASE_KEY);
     x.setRequestHeader('Authorization','Bearer '+SUPABASE_KEY);
-    x.setRequestHeader('Prefer','resolution=merge-duplicates');
-    x.onerror=function(){console.log('syncToCloud network error')};
-    x.onload=function(){if(x.status>=200&&x.status<300)console.log('syncToCloud OK');else console.log('syncToCloud status '+x.status)};
+    x.setRequestHeader('Prefer','return=minimal');
+    x.onerror=function(){tt('☁️ فشل رفع البيانات (شبكة)','err')};
+    x.onload=function(){
+      if(x.status>=200&&x.status<300){
+        localStorage.setItem('wpm_last_sync',now);
+        tt('☁️ تم رفع البيانات للسحابة','ok');
+      } else if(x.status===404){
+        // Row doesn't exist yet, try INSERT via POST
+        var x2=new XMLHttpRequest();
+        x2.open('POST',SUPABASE_URL+'/rest/v1/wpm_data',true);
+        x2.setRequestHeader('Content-Type','application/json');
+        x2.setRequestHeader('apikey',SUPABASE_KEY);
+        x2.setRequestHeader('Authorization','Bearer '+SUPABASE_KEY);
+        x2.onerror=function(){tt('☁️ فشل إنشاء السجل','err')};
+        x2.onload=function(){
+          if(x2.status>=200&&x2.status<300){
+            localStorage.setItem('wpm_last_sync',now);
+            tt('☁️ تم رفع البيانات للسحابة','ok');
+          } else tt('☁️ خطأ في الرفع ('+x2.status+')','err');
+        };
+        x2.send(body);
+      } else tt('☁️ خطأ في الرفع ('+x.status+')','err');
+    };
     x.send(body);
-  }catch(e){console.log('syncToCloud error',e)}
+  }catch(e){tt('☁️ خطأ: '+e.message,'err')}
 }
 function pullFromCloud(){
   try{
@@ -1242,28 +1262,36 @@ function pullFromCloud(){
     x.setRequestHeader('apikey',SUPABASE_KEY);
     x.setRequestHeader('Authorization','Bearer '+SUPABASE_KEY);
     x.onload=function(){
-      if(x.status!==200){console.log('pullFromCloud status '+x.status);return;}
+      if(x.status!==200){tt('☁️ فشل السحب من السحابة ('+x.status+')','err');console.log('pullFromCloud status '+x.status);return;}
       try{
         var rows=JSON.parse(x.responseText);
-        if(!rows||!rows.length){console.log('pullFromCloud empty');tt('☁️ لا توجد بيانات في السحابة','inf');return;}
+        if(!rows||!rows.length){return;}
         var r=rows[0];
-        if(!r||!r.data||!r.date){console.log('pullFromCloud invalid row');return;}
+        if(!r||!r.data||!r.date){return;}
         var local=localStorage.getItem('wpm_last_sync');
-        if(local&&r.date<=local){console.log('pullFromCloud no newer');return;}
-        tt('☁️ تم سحب البيانات من السحابة','ok');
-        console.log('pullFromCloud got new data from '+r.date);
+        if(local&&r.date<=local){return;}
+        tt('☁️ تم تحديث البيانات من السحابة','ok');
         localStorage.setItem('wpm_data',JSON.stringify(r.data));
         localStorage.setItem('wpm_last_sync',r.date);
         if(document.querySelector('.leaflet-container'))location.reload();
       }catch(e){console.log('pullFromCloud parse error',e)}
     };
-    x.onerror=function(){console.log('pullFromCloud network error');tt('☁️ فشل الاتصال بالسحابة','err')};
+    x.onerror=function(){console.log('pullFromCloud network error')};
     x.send();
   }catch(e){console.log('pullFromCloud error',e)}
 }
-// Pull on load, then every 15 seconds; push on every save
+// Pull on load, then every 10 seconds; push on every save
 setTimeout(pullFromCloud,1000);
-setInterval(pullFromCloud,15000);
+setInterval(pullFromCloud,10000);
+
+function fullSync(){
+  syncToCloud();
+  tt('☁️ جاري الرفع للسحابة...','inf');
+  setTimeout(function(){
+    pullFromCloud();
+    tt('☁️ جاري السحب من السحابة...','inf');
+  },1500);
+}
 
 function loadSavedData(){
   try{
