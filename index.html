@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#1565C0">
 <title>شركة مياه اليرموك</title>
 <link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <script>setTimeout(function(){var e=document.getElementById('loading');if(e)e.style.display='none'},1800);</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -321,8 +322,6 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 <script>
 // Hide loading
 function hidel(){var e=document.getElementById('loading');if(e)e.style.display='none'}
-// Load Leaflet CSS async
-(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';document.head.appendChild(l)})();
 
 // ===== STATE =====
 var subs=[],pumps=[],hoods=[],tanks=[],manholes=[],waterlines=[],sewerlines=[],gravitylines=[],complaints=[];
@@ -349,7 +348,7 @@ function loadTile(i){
   tileIdx=i;
 }
 loadTile(0);
-L.control.zoom({position:'bottomright'}).addTo(MI);
+L.control.zoom({position:'topright'}).addTo(MI);
 SL=L.layerGroup().addTo(MI);
 PL=L.layerGroup().addTo(MI);
 IL=L.layerGroup().addTo(MI);
@@ -1839,16 +1838,17 @@ function locateMe(){
   showCrosshair();
   navigator.geolocation.getCurrentPosition(
     function(pos){
+      hideCrosshair();
       var lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
       MI.setView([lat,lng],17);
       tt('🎯 موقعك ('+lat.toFixed(5)+', '+lng.toFixed(5)+') دقة ±'+Math.round(acc)+' م','ok');
     },
     function(err){
       hideCrosshair();
-      var msgs={1:'الرجاء السماح بتحديد الموقع',2:'تعذر',3:'انتهت المهلة'};
-      tt(msgs[err.code]||'خطأ','err');
+      var msgs={1:'الرجاء السماح بتحديد الموقع',2:'تعذر تحديد الموقع',3:'انتهت المهلة'};
+      tt('⚠️ '+msgs[err.code]||'خطأ','err');
     },
-    {enableHighAccuracy:true,timeout:15000,maximumAge:60000}
+    {enableHighAccuracy:false,timeout:10000,maximumAge:120000}
   );
 }
 
