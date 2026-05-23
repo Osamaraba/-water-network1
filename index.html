@@ -69,7 +69,7 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 .search-item .loc-btn:active{transform:scale(.9)}
 .search-item .actions{display:flex;gap:4px}
 .wa-popup-btn{display:inline-block;background:#25D366;color:#fff;border:none;border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;margin-top:4px;text-decoration:none}
-.side-panel{position:fixed;top:54px;left:0;bottom:60px;z-index:998;background:rgba(21,21,45,.95);backdrop-filter:blur(8px);border-left:1px solid rgba(255,255,255,.1);width:180px;padding:14px;transform:translateX(-100%);transition:transform .25s;overflow-y:auto}
+.side-panel{position:fixed;top:54px;right:0;bottom:60px;z-index:998;background:rgba(21,21,45,.95);backdrop-filter:blur(8px);border-right:1px solid rgba(255,255,255,.1);width:180px;padding:14px;transform:translateX(100%);transition:transform .25s;overflow-y:auto}
 .side-panel.show{transform:translateX(0)}
 .chk-row{display:flex;align-items:center;justify-content:space-between;padding:8px 4px;cursor:pointer;border-radius:6px;transition:.15s;font-size:13px;color:#ccc}
 .chk-row:hover{background:rgba(255,255,255,.05)}
@@ -97,12 +97,12 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 
 <button class="fab" id="fabCenter" onclick="cc()" style="right:14px">📍</button>
 <button class="fab" onclick="locateMe()" style="right:66px;border-color:#42A5F5">🎯</button>
-<button class="fab" onclick="toggleSidePanel()" style="left:14px;right:auto;border-color:#66BB6A;font-size:14px" id="sideToggle">☰</button>
+<button class="fab" onclick="toggleSidePanel()" style="right:14px;left:auto;border-color:#66BB6A;font-size:14px" id="sideToggle">☰</button>
 
 <div class="side-panel" id="sidePanel">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
 <b style="font-size:14px">🔍 عرض</b>
-<button onclick="toggleSidePanel()" style="background:none;border:none;color:#888;font-size:18px;cursor:pointer">◀</button>
+<button onclick="toggleSidePanel()" style="background:none;border:none;color:#888;font-size:18px;cursor:pointer">▶</button>
 </div>
 <label class="chk-row"><span>👥 المشتركين</span><input type="checkbox" id="chkSubs" checked onchange="applyFilters()"></label>
 <label class="chk-row"><span>🏭 دور الضخ</span><input type="checkbox" id="chkPumps" checked onchange="applyFilters()"></label>
@@ -1624,7 +1624,7 @@ MI.on('click',function(){
 document.addEventListener('click',function(e){
   var p=document.getElementById('sidePanel');
   if(!p.classList.contains('show'))return;
-  if(p.contains(e.target)||e.target.id==='sideToggle')return;
+  if(p.contains(e.target)||e.target.id==='sideToggle'||e.target.closest('#sideToggle'))return;
   p.classList.remove('show');
 });
 function applyFilters(){
