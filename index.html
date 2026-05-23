@@ -131,7 +131,7 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 <button class="tool-btn" onclick="ts()"><span>🗺️</span><span class="label">خرائط</span></button>
 <button class="tool-btn green" onclick="pullFromCloud()" title="مزامنة"><span>☁️</span><span class="label">مزامنة</span></button>
 <button class="tool-btn" onclick="location.reload()" title="تحديث"><span>🔄</span><span class="label">تحديث</span></button>
-<button class="tool-btn danger" onclick="ca()"><span>🗑️</span><span class="label">مسح</span></button>
+<button class="tool-btn danger" onclick="mo('clearModal')"><span>🗑️</span><span class="label">مسح</span></button>
 </div>
 
 <input type="file" id="fileInput" multiple onchange="hf(this.files)">
@@ -281,12 +281,16 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 <button class="modal-btn secondary" onclick="document.getElementById('backupInput').click()">📥 استيراد نسخة احتياطية</button>
 <button class="modal-btn secondary" onclick="mc('backupModal')">إغلاق</button>
 </div></div>
-<input type="file" id="backupInput" accept=".json" style="display:none" onchange="importBackup(this.files)">
 
-<div class="toast" id="toast"></div>
+<!-- Clear Modal -->
+<div class="modal-overlay" id="clearModal"><div class="modal">
+<h2>🗑️ مسح البيانات</h2>
+<p style="color:#aaa;font-size:12px;margin-bottom:8px">اختر العناصر التي تريد مسحها:</p>
+<div id="clearOptions"></div>
+<button class="modal-btn danger" onclick="doClear()">🗑️ مسح المحدد</button>
+<button class="modal-btn secondary" onclick="mc('clearModal')">إلغاء</button>
+</div></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 // Hide loading
 function hidel(){var e=document.getElementById('loading');if(e)e.style.display='none'}
@@ -990,6 +994,7 @@ function dh(id){
 var origMo=mo;
 function mo(id){
   if(id==='neighborhoodsModal')updateNeighborhoodsList();
+  if(id==='clearModal')updateClearOptions();
   document.getElementById(id).classList.add('show');
 }
 function mc(id){document.getElementById(id).classList.remove('show');}
@@ -1093,12 +1098,34 @@ function de(){
 }
 
 // ===== CLEAR =====
-function ca(){
-  if(!subs.length&&!pumps.length&&!hoods.length&&!tanks.length&&!manholes.length&&!waterlines.length&&!sewerlines.length&&!gravitylines.length&&!complaints.length){tt('لا توجد بيانات','inf');return;}
-  if(!confirm('مسح الكل؟'))return;
-  SL.clearLayers();PL.clearLayers();IL.clearLayers();KL.clearLayers();TL.clearLayers();MHL.clearLayers();WTL.clearLayers();STL.clearLayers();GTL.clearLayers();CL.clearLayers();DI.clearLayers();
-  subs=[];pumps=[];hoods=[];tanks=[];manholes=[];waterlines=[];sewerlines=[];gravitylines=[];complaints=[];
-  autoSave();ui();tt('🗑️ تم المسح','inf');
+function updateClearOptions(){
+  var h='';
+  function add(icon,label,count,id){h+='<label class="chk-row"><span>'+icon+' '+label+' ('+count+')</span><input type="checkbox" id="'+id+'"'+(count?' checked':'')+'></label>';}
+  add('👥','مشتركين',subs.length,'clrSubs');
+  add('🏭','دور ضخ',pumps.filter(function(p){return !p.type||p.type==='pumps';}).length,'clrPumps');
+  add('👁️','نظارة',pumps.filter(function(p){return p.type==='inspection';}).length,'clrInsp');
+  add('⛔','توقف ضخ',pumps.filter(function(p){return p.type==='pumpstop';}).length,'clrStop');
+  add('🚰','خزانات',tanks.length,'clrTanks');
+  add('🕳️','مناهل',manholes.length,'clrMHs');
+  add('🔵','شبكة مياه',waterlines.length,'clrWater');
+  add('🟤','شبكة صرف',sewerlines.length,'clrSewer');
+  add('🟣','مسارات الجباه',gravitylines.length,'clrGravity');
+  add('📋','بلاغات صيانة',complaints.length,'clrComp');
+  add('🏘️','أحياء',hoods.length,'clrHoods');
+  document.getElementById('clearOptions').innerHTML=h;
+}
+function doClear(){
+  var any=false;
+  function doit(ids,arr,lyr){if(document.getElementById(ids)&&document.getElementById(ids).checked){clearArray(arr);if(lyr)lyr.clearLayers();any=true;}}
+  function clearArray(a){while(a.length)a.pop();}
+  doit('clrSubs',subs,SL);doit('clrPumps',pumps,PL);doit('clrInsp',pumps,IL);doit('clrStop',pumps,KL);
+  doit('clrTanks',tanks,TL);doit('clrMHs',manholes,MHL);doit('clrWater',waterlines,WTL);
+  doit('clrSewer',sewerlines,STL);doit('clrGravity',gravitylines,GTL);doit('clrComp',complaints,CL);
+  if(document.getElementById('clrHoods')&&document.getElementById('clrHoods').checked){
+    hoods=[];if(DI)DI.clearLayers();any=true;
+  }
+  if(!any){tt('اختر عناصر للمسح','inf');return;}
+  saveData();ui();mc('clearModal');tt('🗑️ تم مسح المحدد','ok');
 }
 
 // ===== SAMPLE DATA =====
