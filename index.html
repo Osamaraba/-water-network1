@@ -275,7 +275,7 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 </div></div>
 
 <!-- Backup Modal -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <div class="modal-overlay" id="backupModal"><div class="modal">
 <h2>💾 حفظ واسترجاع</h2>
 <p style="color:#aaa;font-size:12px">البيانات محفوظة تلقائياً في الجهاز</p>
@@ -322,7 +322,7 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 // Hide loading
 function hidel(){var e=document.getElementById('loading');if(e)e.style.display='none'}
 // Load Leaflet CSS async
-(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(l)})();
+(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';document.head.appendChild(l)})();
 
 // ===== STATE =====
 var subs=[],pumps=[],hoods=[],tanks=[],manholes=[],waterlines=[],sewerlines=[],gravitylines=[],complaints=[];
@@ -331,10 +331,14 @@ var drawMode=false,pumpVis=true;
 var pendingLayer=null; // holds the drawn polygon until name is given
 
 // ===== MAP INIT =====
+if(typeof L==='undefined'){
+  document.getElementById('map').innerHTML='<div style="padding:40px;text-align:center;color:#ef5350">⚠️ فشل تحميل مكتبة الخريطة. تحقق من اتصال الإنترنت.</div>';
+  var hidel=function(){};
+}else{
 MI=L.map('map',{center:[32.3499,35.7483],zoom:13,zoomControl:false,attributionControl:false});
 var tileSources=[
+  {name:'شارع',url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',maxZoom:19,attr:'© <a href=\"https://openstreetmap.org\">OSM</a>'},
   {name:'تضاريس ESRI',url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',maxZoom:19,attr:'ESRI Topo'},
-  {name:'شارع',url:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',maxZoom:19,attr:'© <a href=\"https://carto.com/\">CARTO</a>'},
   {name:'أقمار',url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',maxZoom:19,attr:'ESRI'}
 ];
 var tileIdx=0,curTile=null;
@@ -359,6 +363,7 @@ CL=L.layerGroup().addTo(MI);
 DI=L.featureGroup().addTo(MI);
 loadDraw();
 hidel();
+}
 
 // ===== LOAD LEAFLET.DRAW =====
 function loadDraw(){
