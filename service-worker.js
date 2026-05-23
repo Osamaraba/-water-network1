@@ -1,4 +1,4 @@
-const CACHE = 'water-pump-v1';
+const CACHE = 'water-pump-v2';
 const urlsToCache = [
   'index.html',
   'manifest.json'
