@@ -1856,7 +1856,7 @@ function locateMe(){
       var msgs={1:'الرجاء السماح بتحديد الموقع',2:'تعذر تحديد الموقع',3:'انتهت المهلة'};
       tt('⚠️ '+msgs[err.code]||'خطأ','err');
     },
-    {enableHighAccuracy:false,timeout:10000,maximumAge:120000}
+    {enableHighAccuracy:true,timeout:15000,maximumAge:60000}
   );
 }
 
