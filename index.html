@@ -146,21 +146,6 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 <div class="toast" id="toast"></div>
 
 <!-- GPS Modal -->
-<div class="modal-overlay" id="gpsModal"><div class="modal" style="text-align:right;direction:rtl">
-<h2>📍 تشغيل GPS</h2>
-<div style="font-size:13px;line-height:1.8">
-<p>لتحديد موقعك على الخريطة، يجب تشغيل GPS:</p>
-<ol style="padding-right:20px;margin:8px 0">
-<li>اسحب الشاشة من <b>أعلى لأسفل</b> (قائمة الإشعارات)</li>
-<li>ابحث عن أيقونة <b>📍 الموقع</b> أو <b>GPS</b></li>
-<li>اضغط عليها لتشغيلها (تتحول للأزرق/الأخضر)</li>
-<li>عد إلى التطبيق واضغط <b>🎯 تحديد موقعي</b></li>
-</ol>
-<p style="color:#FFD54F;font-size:12px;margin-top:8px">💡 إذا طلب المتصفح إذن الوصول للموقع، اضغط <b>سماح</b></p>
-</div>
-<button class="modal-btn primary" onclick="mc('gpsModal');localStorage.setItem('gps_taught','1');locateMe();">✅ فهمت، جرب الآن</button>
-<button class="modal-btn secondary" onclick="mc('gpsModal');localStorage.setItem('gps_taught','1')">إغلاق</button>
-</div></div>
 
 <!-- Import Modal -->
 <div class="modal-overlay" id="importModal"><div class="modal">
@@ -387,8 +372,7 @@ GTL=L.layerGroup().addTo(MI);
 CL=L.layerGroup().addTo(MI);
   DI=L.featureGroup().addTo(MI);
   MI.on('contextmenu',function(e){
-    placeMyMarker(e.latlng.lat,e.latlng.lng);
-    tt('📍 تم وضع علامة موقعك. اسحبها للتعديل.','ok');
+    placeMyMarker(e.latlng.lat,e.latlng.lng,17);
   });
   loadDraw();
   hidel();
@@ -1871,61 +1855,38 @@ function applyFilters(){
 }
 
 // ===== LOCATE ME =====
-function placeMyMarker(lat,lng){
+function placeMyMarker(lat,lng,zoom){
   if(myLocMarker)MI.removeLayer(myLocMarker);
   myLocMarker=L.marker([lat,lng],{draggable:true,icon:L.divIcon({className:'my-loc-marker',html:'<div style="background:#1565C0;color:#fff;border:3px solid #fff;border-radius:50%;width:24px;height:24px;text-align:center;line-height:24px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.4)">📍</div>',iconSize:[28,28],iconAnchor:[14,14]})}).addTo(MI);
   myLocMarker.on('dragend',function(){
     var p=myLocMarker.getLatLng();
-    tt('📍 موقعك اليدوي: ('+p.lat.toFixed(5)+', '+p.lng.toFixed(5)+')','ok');
+    localStorage.setItem('myLocLat',p.lat);
+    localStorage.setItem('myLocLng',p.lng);
+    tt('📍 موقعك: ('+p.lat.toFixed(5)+', '+p.lng.toFixed(5)+')','ok');
   });
   localStorage.setItem('myLocLat',lat);
   localStorage.setItem('myLocLng',lng);
-  tt('📍 تم حفظ موقعك اليدوي. اسحب العلامة لتعديله.','ok');
-  MI.setView([lat,lng],17);
+  MI.setView([lat,lng],zoom||17);
+  tt('📍 موقعك ('+lat.toFixed(4)+', '+lng.toFixed(4)+')','ok');
 }
 function loadMyMarker(){
   var lat=localStorage.getItem('myLocLat'),lng=localStorage.getItem('myLocLng');
-  if(lat&&lng)placeMyMarker(parseFloat(lat),parseFloat(lng));
+  if(lat&&lng)placeMyMarker(parseFloat(lat),parseFloat(lng),15);
 }
 function locateMe(){
-  if(!navigator.geolocation){tt('الموقع غير مدعوم في هذا الجهاز','err');return;}
-  if(!localStorage.getItem('gps_taught')){
-    mo('gpsModal');
-    return;
-  }
+  if(!navigator.geolocation){tt('الموقع غير مدعوم','err');return;}
   tt('📍 جاري تحديد الموقع...','inf');
   showCrosshair();
   navigator.geolocation.getCurrentPosition(
     function(pos){
       hideCrosshair();
       var lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
-      MI.setView([lat,lng],acc>1000?12:17);
-      placeMyMarker(lat,lng);
-      if(acc>1000)tt('🎯 موقع تقريبي (الخطأ ±'+Math.round(acc)+' م) - الموقع ليس عجلون. اسحب العلامة الزرقاء إلى موقعك الحقيقي','err');
-      else tt('🎯 موقعك ('+lat.toFixed(3)+', '+lng.toFixed(3)+') دقة ±'+Math.round(acc)+' م','ok');
+      placeMyMarker(lat,lng,acc>1000?12:17);
     },
     function(err){
       hideCrosshair();
-      if(err.code===1)tt('⚠️ الرجاء السماح بتحديد الموقع في إعدادات المتصفح','err');
-      else if(err.code===2)tt('⚠️ تعذر تحديد الموقع. تأكد من تشغيل GPS','err');
-      else if(err.code===3){
-        navigator.geolocation.getCurrentPosition(
-          function(pos){
-            hideCrosshair();
-            var lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
-            MI.setView([lat,lng],acc>1000?12:17);
-            placeMyMarker(lat,lng);
-            if(acc>1000)tt('🎯 موقع تقريبي (الخطأ ±'+Math.round(acc)+' م) - اسحب العلامة الزرقاء إلى موقعك الحقيقي','err');
-            else tt('🎯 موقعك ('+lat.toFixed(3)+', '+lng.toFixed(3)+') دقة ±'+Math.round(acc)+' م','ok');
-          },
-          function(){
-            hideCrosshair();
-            tt('⚠️ تعذر تحديد الموقع. ضع علامتك يدوياً: اضغط مطولاً على الخريطة','err');
-          },
-          {enableHighAccuracy:false,timeout:10000,maximumAge:300000}
-        );
-      }
-      else tt('⚠️ خطأ في تحديد الموقع','err');
+      if(err.code===1)tt('⚠️ سماح بالموقع في إعدادات المتصفح','err');
+      else tt('⚠️ تعذر تحديد الموقع. اسحب الخريطة وضع علامتك: اضغط مطولاً','err');
     },
     {enableHighAccuracy:true,timeout:15000,maximumAge:60000}
   );
