@@ -79,6 +79,7 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 .chk-row{display:flex;align-items:center;justify-content:space-between;padding:8px 4px;cursor:pointer;border-radius:6px;transition:.15s;font-size:13px;color:#ccc}
 .chk-row:hover{background:rgba(255,255,255,.05)}
 .chk-row input{width:18px;height:18px;cursor:pointer;accent-color:#42A5F5}
+.my-loc-marker{background:none!important;border:none!important}
 </style>
 </head>
 <body>
@@ -352,6 +353,7 @@ function hidel(){var e=document.getElementById('loading');if(e)e.style.display='
 var subs=[],pumps=[],hoods=[],tanks=[],manholes=[],waterlines=[],sewerlines=[],gravitylines=[],complaints=[];
 var SL,PL,IL,KL,TL,MHL,WTL,STL,GTL,CL,DI,MI;
 var drawMode=false,pumpVis=true;
+var myLocMarker=null;
 var pendingLayer=null; // holds the drawn polygon until name is given
 
 // ===== MAP INIT =====
@@ -383,9 +385,14 @@ WTL=L.layerGroup().addTo(MI);
 STL=L.layerGroup().addTo(MI);
 GTL=L.layerGroup().addTo(MI);
 CL=L.layerGroup().addTo(MI);
-DI=L.featureGroup().addTo(MI);
-loadDraw();
-hidel();
+  DI=L.featureGroup().addTo(MI);
+  MI.on('contextmenu',function(e){
+    placeMyMarker(e.latlng.lat,e.latlng.lng);
+    tt('📍 تم وضع علامة موقعك. اسحبها للتعديل.','ok');
+  });
+  loadDraw();
+  hidel();
+  loadMyMarker();
 }
 
 // ===== LOAD LEAFLET.DRAW =====
@@ -1864,6 +1871,22 @@ function applyFilters(){
 }
 
 // ===== LOCATE ME =====
+function placeMyMarker(lat,lng){
+  if(myLocMarker)MI.removeLayer(myLocMarker);
+  myLocMarker=L.marker([lat,lng],{draggable:true,icon:L.divIcon({className:'my-loc-marker',html:'<div style="background:#1565C0;color:#fff;border:3px solid #fff;border-radius:50%;width:24px;height:24px;text-align:center;line-height:24px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.4)">📍</div>',iconSize:[28,28],iconAnchor:[14,14]})}).addTo(MI);
+  myLocMarker.on('dragend',function(){
+    var p=myLocMarker.getLatLng();
+    tt('📍 موقعك اليدوي: ('+p.lat.toFixed(5)+', '+p.lng.toFixed(5)+')','ok');
+  });
+  localStorage.setItem('myLocLat',lat);
+  localStorage.setItem('myLocLng',lng);
+  tt('📍 تم حفظ موقعك اليدوي. اسحب العلامة لتعديله.','ok');
+  MI.setView([lat,lng],17);
+}
+function loadMyMarker(){
+  var lat=localStorage.getItem('myLocLat'),lng=localStorage.getItem('myLocLng');
+  if(lat&&lng)placeMyMarker(parseFloat(lat),parseFloat(lng));
+}
 function locateMe(){
   if(!navigator.geolocation){tt('الموقع غير مدعوم في هذا الجهاز','err');return;}
   if(!localStorage.getItem('gps_taught')){
@@ -1877,26 +1900,27 @@ function locateMe(){
       hideCrosshair();
       var lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
       MI.setView([lat,lng],17);
-      var accMsg=acc<50?' (دقة عالية)':acc<200?' (متوسطة)':' (تقريبية)';
-      tt('🎯 موقعك ('+lat.toFixed(5)+', '+lng.toFixed(5)+') دقة ±'+Math.round(acc)+' م'+accMsg,'ok');
+      placeMyMarker(lat,lng);
+      if(acc>1000)tt('🎯 موقعك ('+lat.toFixed(5)+', '+lng.toFixed(5)+') دقة ±'+Math.round(acc)+' م (تقريبي) - اسحب العلامة الزرقاء للموقع الصحيح','inf');
+      else tt('🎯 موقعك ('+lat.toFixed(3)+', '+lng.toFixed(3)+') دقة ±'+Math.round(acc)+' م','ok');
     },
     function(err){
       hideCrosshair();
       if(err.code===1)tt('⚠️ الرجاء السماح بتحديد الموقع في إعدادات المتصفح','err');
       else if(err.code===2)tt('⚠️ تعذر تحديد الموقع. تأكد من تشغيل GPS','err');
       else if(err.code===3){
-        // GPS timeout - try lower accuracy as fallback
         navigator.geolocation.getCurrentPosition(
           function(pos){
             hideCrosshair();
             var lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
             MI.setView([lat,lng],15);
-            var accMsg=acc<50?' (دقة عالية)':acc<200?' (متوسطة)':' (تقريبية)';
-            tt('🎯 موقعك ('+lat.toFixed(5)+', '+lng.toFixed(5)+') دقة ±'+Math.round(acc)+' م'+accMsg,'ok');
+            placeMyMarker(lat,lng);
+            if(acc>1000)tt('🎯 موقعك ('+lat.toFixed(5)+', '+lng.toFixed(5)+') دقة ±'+Math.round(acc)+' م (تقريبي) - اسحب العلامة الزرقاء للموقع الصحيح','inf');
+            else tt('🎯 موقعك ('+lat.toFixed(3)+', '+lng.toFixed(3)+') دقة ±'+Math.round(acc)+' م','ok');
           },
           function(){
             hideCrosshair();
-            tt('⚠️ تعذر تحديد الموقع. تأكد من تشغيل GPS وحاول مرة أخرى','err');
+            tt('⚠️ تعذر تحديد الموقع. ضع علامتك يدوياً: اضغط مطولاً على الخريطة','err');
           },
           {enableHighAccuracy:false,timeout:10000,maximumAge:300000}
         );
