@@ -52,8 +52,9 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 .modal h2{font-size:17px;margin-bottom:12px;color:#fff;display:flex;align-items:center;gap:8px}
 .modal p{color:#aaa;font-size:13px;margin-bottom:10px}
 .modal label{display:block;font-size:12px;color:#888;margin-bottom:3px;margin-top:10px}
-.modal input,.modal select{width:100%;padding:9px 10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#fff;font-size:13px;outline:none;font-family:inherit}
-.modal input:focus,.modal select:focus{border-color:#42A5F5}
+.modal input,.modal select,.modal textarea{width:100%;padding:9px 10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#fff;font-size:13px;outline:none;font-family:inherit}
+.modal input:focus,.modal select:focus,.modal textarea:focus{border-color:#42A5F5}
+.modal textarea{resize:vertical;min-height:40px}
 .modal-btn{width:100%;padding:10px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px;transition:.15s}
 .modal-btn.primary{background:linear-gradient(135deg,#42A5F5,#1565C0);color:#fff}
 .modal-btn.secondary{background:rgba(255,255,255,.08);color:#ccc}
@@ -140,6 +141,8 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 </div>
 
 <input type="file" id="fileInput" multiple onchange="hf(this.files)">
+
+<div class="toast" id="toast"></div>
 
 <!-- Import Modal -->
 <div class="modal-overlay" id="importModal"><div class="modal">
@@ -287,6 +290,8 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 <button class="modal-btn secondary" onclick="document.getElementById('backupInput').click()">📥 استيراد نسخة احتياطية</button>
 <button class="modal-btn secondary" onclick="mc('backupModal')">إغلاق</button>
 </div></div>
+
+<input type="file" id="backupInput" accept=".json" style="display:none" onchange="importBackup(this.files)">
 
 <!-- About Modal -->
 <div class="modal-overlay" id="aboutModal"><div class="modal" style="text-align:right;direction:rtl">
@@ -1351,7 +1356,7 @@ function startAddSub(){
   MI.getContainer().style.cursor='crosshair';
   tt('🧑‍🌾 اضغط على الخريطة لإضافة مشترك','inf');
 }
-MI.on('click',function(e){
+if(MI)MI.on('click',function(e){
   if(!addSubMode)return;
   addSubLat=e.latlng.lat;addSubLng=e.latlng.lng;
   document.getElementById('addSubCoords').innerHTML='📍 '+addSubLat.toFixed(6)+', '+addSubLng.toFixed(6);
@@ -1599,6 +1604,7 @@ function waPopupPump(id){
 
 // ===== COMPLAINT FROM WHATSAPP =====
 function useMapCenter(){
+  if(!MI){tt('الخريطة غير متاحة','err');return;}
   var c=MI.getCenter();
   document.getElementById('compCoordInput').value=c.lat.toFixed(6)+', '+c.lng.toFixed(6);
 }
@@ -1797,8 +1803,8 @@ function toggleSidePanel(){
   var p=document.getElementById('sidePanel');
   p.classList.toggle('show');
 }
-// Close panel on map click (Leaflet swallows document clicks)
-MI.on('click',function(){
+// Close panel on map click
+if(MI)MI.on('click',function(){
   var p=document.getElementById('sidePanel');
   if(p.classList.contains('show'))p.classList.remove('show');
 });
@@ -1866,6 +1872,9 @@ if('serviceWorker'in navigator){
 }
 loadSavedData();
 hidel();
+// Diagnostic
+if(typeof L==='undefined')console.error('Leaflet L is undefined');
+if(!MI)console.error('Map MI is undefined');
 </script>
 </body>
 </html>
