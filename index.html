@@ -494,7 +494,6 @@ function td(){
 
 // ===== FILE HANDLING =====
 function hf(files){
-  mc('importModal');
   var type=document.getElementById('importType').value;
   for(var i=0;i<files.length;i++){
     var f=files[i];
@@ -547,7 +546,7 @@ function pk(xmlStr,importType){
   var p=new DOMParser(),xm=p.parseFromString(xmlStr,'text/xml');
   if(xm.querySelector('parsererror')){tt('خطأ في KML','err');return;}
   var pms=xm.querySelectorAll('Placemark'),cnt=0;
-  var isLine=importType==='waterline'||importType==='sewerline';
+  var isLine=importType==='waterline'||importType==='sewerline'||importType==='gravityline';
   pms.forEach(function(pm){
     var n=(pm.querySelector('name')?.textContent||'').trim();
     var d=(pm.querySelector('description')?.textContent||'').trim();
@@ -599,7 +598,7 @@ function pk(xmlStr,importType){
 // ===== PARSE GPX =====
 function pg(xmlStr,importType){
   var p=new DOMParser(),xm=p.parseFromString(xmlStr,'text/xml'),cnt=0;
-  var isLine=importType==='waterline'||importType==='sewerline';
+  var isLine=importType==='waterline'||importType==='sewerline'||importType==='gravityline';
   if(isLine){
     xm.querySelectorAll('trk').forEach(function(trk){
       var n=(trk.querySelector('name')?.textContent||'').trim();
@@ -673,7 +672,7 @@ function pc(csvStr,importType){
 function pj(jsonStr,importType){
   try{
     var gj=JSON.parse(jsonStr),cnt=0;
-    var isLine=importType==='waterline'||importType==='sewerline';
+    var isLine=importType==='waterline'||importType==='sewerline'||importType==='gravityline';
     if(gj.features)gj.features.forEach(function(f){
       if(!f.geometry)return;
       var n=f.properties?.name||'',d=JSON.stringify(f.properties||{});
@@ -1894,16 +1893,9 @@ function locateMe(){
 
 // ===== SERVICE WORKER =====
 if('serviceWorker'in navigator){
-  navigator.serviceWorker.getRegistrations().then(function(regs){
-    if(regs.length){
-      regs.forEach(function(r){r.unregister();});
-      location.reload(true);
-      return;
-    }
-    navigator.serviceWorker.register('service-worker.js?v='+Date.now()).then(function(reg){
-      reg.update();
-    }).catch(function(){});
-  });
+  navigator.serviceWorker.register('service-worker.js?v=6').then(function(reg){
+    reg.update();
+  }).catch(function(){});
 }
 loadSavedData();
 hidel();
