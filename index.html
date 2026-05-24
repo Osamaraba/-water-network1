@@ -144,6 +144,23 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 
 <div class="toast" id="toast"></div>
 
+<!-- GPS Modal -->
+<div class="modal-overlay" id="gpsModal"><div class="modal" style="text-align:right;direction:rtl">
+<h2>📍 تشغيل GPS</h2>
+<div style="font-size:13px;line-height:1.8">
+<p>لتحديد موقعك على الخريطة، يجب تشغيل GPS:</p>
+<ol style="padding-right:20px;margin:8px 0">
+<li>اسحب الشاشة من <b>أعلى لأسفل</b> (قائمة الإشعارات)</li>
+<li>ابحث عن أيقونة <b>📍 الموقع</b> أو <b>GPS</b></li>
+<li>اضغط عليها لتشغيلها (تتحول للأزرق/الأخضر)</li>
+<li>عد إلى التطبيق واضغط <b>🎯 تحديد موقعي</b></li>
+</ol>
+<p style="color:#FFD54F;font-size:12px;margin-top:8px">💡 إذا طلب المتصفح إذن الوصول للموقع، اضغط <b>سماح</b></p>
+</div>
+<button class="modal-btn primary" onclick="mc('gpsModal');localStorage.setItem('gps_taught','1');locateMe();">✅ فهمت، جرب الآن</button>
+<button class="modal-btn secondary" onclick="mc('gpsModal');localStorage.setItem('gps_taught','1')">إغلاق</button>
+</div></div>
+
 <!-- Import Modal -->
 <div class="modal-overlay" id="importModal"><div class="modal">
 <h2>📥 استيراد</h2>
@@ -1850,7 +1867,11 @@ function applyFilters(){
 // ===== LOCATE ME =====
 function locateMe(){
   if(!navigator.geolocation){tt('الموقع غير مدعوم في هذا الجهاز','err');return;}
-  tt('📍 تأكد من تشغيل GPS ثم اضغط تحديد موقعي...','inf');
+  if(!localStorage.getItem('gps_taught')){
+    mo('gpsModal');
+    return;
+  }
+  tt('📍 جاري تحديد الموقع...','inf');
   showCrosshair();
   navigator.geolocation.getCurrentPosition(
     function(pos){
