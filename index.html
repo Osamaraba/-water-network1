@@ -1849,20 +1849,23 @@ function applyFilters(){
 
 // ===== LOCATE ME =====
 function locateMe(){
-  if(!navigator.geolocation){tt('الموقع غير مدعوم','err');return;}
-  tt('جاري تحديد الموقع...','inf');
+  if(!navigator.geolocation){tt('الموقع غير مدعوم في هذا الجهاز','err');return;}
+  tt('📍 تأكد من تشغيل GPS ثم اضغط تحديد موقعي...','inf');
   showCrosshair();
   navigator.geolocation.getCurrentPosition(
     function(pos){
       hideCrosshair();
       var lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
       MI.setView([lat,lng],17);
-      tt('🎯 موقعك ('+lat.toFixed(5)+', '+lng.toFixed(5)+') دقة ±'+Math.round(acc)+' م','ok');
+      var accMsg=acc<50?' (دقة عالية)':acc<200?' (متوسطة)':' (تقريبية)';
+      tt('🎯 موقعك ('+lat.toFixed(5)+', '+lng.toFixed(5)+') دقة ±'+Math.round(acc)+' م'+accMsg,'ok');
     },
     function(err){
       hideCrosshair();
-      var msgs={1:'الرجاء السماح بتحديد الموقع',2:'تعذر تحديد الموقع',3:'انتهت المهلة'};
-      tt('⚠️ '+msgs[err.code]||'خطأ','err');
+      if(err.code===1)tt('⚠️ الرجاء السماح بتحديد الموقع في إعدادات المتصفح','err');
+      else if(err.code===2)tt('⚠️ تعذر تحديد الموقع. تأكد من تشغيل GPS','err');
+      else if(err.code===3)tt('⚠️ انتهت المهلة. تأكد من تشغيل GPS وحاول مرة أخرى','err');
+      else tt('⚠️ خطأ في تحديد الموقع','err');
     },
     {enableHighAccuracy:true,timeout:15000,maximumAge:60000}
   );
