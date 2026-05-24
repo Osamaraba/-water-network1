@@ -1864,13 +1864,14 @@ function applyFilters(){
 }
 
 // ===== LOCATE ME =====
-function locateMe(){
+function locateMe(useHigh){
   if(!navigator.geolocation){tt('الموقع غير مدعوم في هذا الجهاز','err');return;}
   if(!localStorage.getItem('gps_taught')){
     mo('gpsModal');
     return;
   }
-  tt('📍 جاري تحديد الموقع...','inf');
+  if(useHigh===undefined)useHigh=true;
+  tt('📍 جاري تحديد الموقع'+(useHigh?' (GPS)':' (شبكة)')+'...','inf');
   showCrosshair();
   navigator.geolocation.getCurrentPosition(
     function(pos){
@@ -1882,12 +1883,17 @@ function locateMe(){
     },
     function(err){
       hideCrosshair();
-      if(err.code===1)tt('⚠️ الرجاء السماح بتحديد الموقع في إعدادات المتصفح','err');
-      else if(err.code===2)tt('⚠️ تعذر تحديد الموقع. تأكد من تشغيل GPS','err');
-      else if(err.code===3)tt('⚠️ انتهت المهلة. تأكد من تشغيل GPS وحاول مرة أخرى','err');
-      else tt('⚠️ خطأ في تحديد الموقع','err');
+      if(err.code===1){tt('⚠️ الرجاء السماح بتحديد الموقع في إعدادات المتصفح','err');return;}
+      if(useHigh){
+        tt('⚠️ GPS غير متاح. جاري تحديد الموقع عبر الشبكة...','inf');
+        setTimeout(function(){locateMe(false);},500);
+      }else{
+        if(err.code===2)tt('⚠️ تعذر تحديد الموقع. تأكد من تشغيل GPS أو WiFi','err');
+        else if(err.code===3)tt('⚠️ انتهت المهلة. حاول مرة أخرى','err');
+        else tt('⚠️ خطأ في تحديد الموقع','err');
+      }
     },
-    {enableHighAccuracy:true,timeout:15000,maximumAge:60000}
+    {enableHighAccuracy:useHigh,timeout:useHigh?20000:10000,maximumAge:useHigh?0:120000}
   );
 }
 
