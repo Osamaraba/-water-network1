@@ -1899,9 +1899,9 @@ function locateMe(){
     function(pos){
       hideCrosshair();
       var lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
-      MI.setView([lat,lng],17);
+      MI.setView([lat,lng],acc>1000?12:17);
       placeMyMarker(lat,lng);
-      if(acc>1000)tt('🎯 موقعك ('+lat.toFixed(5)+', '+lng.toFixed(5)+') دقة ±'+Math.round(acc)+' م (تقريبي) - اسحب العلامة الزرقاء للموقع الصحيح','inf');
+      if(acc>1000)tt('🎯 موقع تقريبي (الخطأ ±'+Math.round(acc)+' م) - الموقع ليس عجلون. اسحب العلامة الزرقاء إلى موقعك الحقيقي','err');
       else tt('🎯 موقعك ('+lat.toFixed(3)+', '+lng.toFixed(3)+') دقة ±'+Math.round(acc)+' م','ok');
     },
     function(err){
@@ -1913,9 +1913,9 @@ function locateMe(){
           function(pos){
             hideCrosshair();
             var lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
-            MI.setView([lat,lng],15);
+            MI.setView([lat,lng],acc>1000?12:17);
             placeMyMarker(lat,lng);
-            if(acc>1000)tt('🎯 موقعك ('+lat.toFixed(5)+', '+lng.toFixed(5)+') دقة ±'+Math.round(acc)+' م (تقريبي) - اسحب العلامة الزرقاء للموقع الصحيح','inf');
+            if(acc>1000)tt('🎯 موقع تقريبي (الخطأ ±'+Math.round(acc)+' م) - اسحب العلامة الزرقاء إلى موقعك الحقيقي','err');
             else tt('🎯 موقعك ('+lat.toFixed(3)+', '+lng.toFixed(3)+') دقة ±'+Math.round(acc)+' م','ok');
           },
           function(){
