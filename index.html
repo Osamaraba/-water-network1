@@ -220,6 +220,11 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 <input type="text" id="pumpVillage" placeholder="القرية (مثال: عين جنا)">
 <input type="text" id="pumpNeighborhood" placeholder="الحي (مثال: الشرق)">
 <input type="text" id="pumpCapacity" placeholder="كمية الضخ (م³/ساعة)" dir="ltr" style="text-align:left">
+<div style="display:flex;gap:6px;margin:6px 0">
+<input type="date" id="pumpDate" style="flex:1;direction:ltr" title="تاريخ بداية الضخ">
+<input type="time" id="pumpTime" style="flex:1;direction:ltr" title="ساعة بداية الضخ">
+</div>
+<input type="number" id="pumpDuration" placeholder="مدة الضخ (ساعة)" dir="ltr" style="text-align:left" min="0" step="0.5">
 <textarea id="pumpDesc" rows="2" placeholder="ملاحظات"></textarea>
 <div style="display:flex;gap:6px;margin:4px 0">
 <button class="modal-btn" style="flex:1;background:#37474F;font-size:11px" id="pumpPolyBtn" onclick="startPumpPolygon()">🗺️ رسم حدود الحي</button>
@@ -717,7 +722,7 @@ function ap(lat,lon,name,desc,type,alt,subId){
   pt.type=type;
   if(type==='pumps'||type==='inspection'||type==='pumpstop'||type==='tank'||type==='manhole'||type==='complaint'){
     var cls,icon,col,label,layer,arr;
-    if(type==='pumps'){cls='pump-mkr';icon='🏭';col='#E65100';label='دور ضخ';layer=PL;arr=pumps;pt.capacity=pt.capacity||'';pt.province=pt.province||'';pt.village=pt.village||'';pt.neighborhood=pt.neighborhood||'';pt.polygon=pt.polygon||null;}
+    if(type==='pumps'){cls='pump-mkr';icon='🏭';col='#E65100';label='دور ضخ';layer=PL;arr=pumps;pt.capacity=pt.capacity||'';pt.province=pt.province||'';pt.village=pt.village||'';pt.neighborhood=pt.neighborhood||'';pt.polygon=pt.polygon||null;pt.pumpDate=pt.pumpDate||'';pt.pumpTime=pt.pumpTime||'';pt.pumpDuration=pt.pumpDuration||'';}
     else if(type==='inspection'){cls='insp-mkr';icon='👁️';col='#E91E63';label='نظارة / انظار';layer=IL;arr=pumps;}
     else if(type==='pumpstop'){cls='stop-mkr';icon='⛔';col='#B71C1C';label='توقف الضخ';layer=KL;arr=pumps;}
     else if(type==='tank'){cls='tank-mkr';icon='🚰';col='#00BCD4';label='خزان مياه';layer=TL;arr=tanks;}
@@ -728,11 +733,18 @@ function ap(lat,lon,name,desc,type,alt,subId){
     var popup='<b style="color:'+col+'">'+pt.name+'</b><br><span style="color:#888;font-size:11px">'+(pt.desc||label)+'</span>';
     if(type==='pumps'){
       if(pt.capacity)popup+='<br><span style="font-size:11px">💧 '+pt.capacity+' م³/ساعة</span>';
+      if(pt.pumpDate||pt.pumpTime||pt.pumpDuration){
+        popup+='<br><span style="color:#FFD54F;font-size:10px">⏱ ';
+        if(pt.pumpDate)popup+=pt.pumpDate+' ';
+        if(pt.pumpTime)popup+=pt.pumpTime+' ';
+        if(pt.pumpDuration)popup+='('+pt.pumpDuration+' س)';
+        popup+='</span>';
+      }
       if(pt.province||pt.village||pt.neighborhood)popup+='<br><span style="color:#90CAF9;font-size:10px">'+(pt.province||'')+(pt.village?' | '+pt.village:'')+(pt.neighborhood?' | '+pt.neighborhood:'')+'</span>';
     }
     if(pt.alt!==null){popup+='<br><span style="color:#aaa;font-size:10px">ارتفاع: '+pt.alt.toFixed(1)+' م</span>';popup+=elevDiff(pt);}
     popup+='<br><button class="wa-popup-btn" onclick="waPopupPump(\''+id+'\')">📱 واتساب</button>';
-    if(type==='pumps')popup+=' <button class="wa-popup-btn" style="background:#1565C0" onclick="editPump(\''+id+'\')">✏️ تعديل</button>';
+    if(type==='pumps')popup+=' <button class="wa-popup-btn" style="background:#1565C0" onclick="editPump(\''+id+'\')">✏️ تعديل</button> <button class="wa-popup-btn" style="background:#E65100" onclick="notifyPump(\''+id+'\')">📢 إشعار</button>';
     m.bindPopup(popup);m._pid=id;layer.addLayer(m);
   }else{
     subs.push(pt);
@@ -1237,7 +1249,7 @@ function saveData(){
   try{
     var data={
       subs:subs.map(function(s){return {id:s.id,lat:s.lat,lng:s.lng,name:s.name,desc:s.desc,alt:s.alt,phone:s.phone,address:s.address,subId:s.subId,photo:s.photo||null,meterReading:s.meterReading||null};}),
-      pumps:pumps.map(function(p){return {id:p.id,lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,capacity:p.capacity,type:p.type,province:p.province||'',village:p.village||'',neighborhood:p.neighborhood||'',polygon:p.polygon||null};}),
+      pumps:pumps.map(function(p){return {id:p.id,lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,capacity:p.capacity,type:p.type,province:p.province||'',village:p.village||'',neighborhood:p.neighborhood||'',polygon:p.polygon||null,pumpDate:p.pumpDate||'',pumpTime:p.pumpTime||'',pumpDuration:p.pumpDuration||''};}),
       tanks:tanks.map(function(t){return {id:t.id,lat:t.lat,lng:t.lng,name:t.name,desc:t.desc,alt:t.alt};}),
       manholes:manholes.map(function(m){return {id:m.id,lat:m.lat,lng:m.lng,name:m.name,desc:m.desc,alt:m.alt};}),
       waterlines:waterlines.map(function(l){return {id:l.id,name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc};}),
@@ -1360,7 +1372,7 @@ function loadSavedData(){
       var m=ap(p.lat,p.lng,p.name,p.desc,t,p.alt);
       if(t==='pumps'){
         var pt=pumps[pumps.length-1];
-        if(pt){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;}
+        if(pt){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;pt.pumpDate=p.pumpDate||'';pt.pumpTime=p.pumpTime||'';pt.pumpDuration=p.pumpDuration||'';}
       }
     });
     renderPumpPolygons();
@@ -1465,7 +1477,7 @@ function startAddPump(){
   if(addPumpMode){cancelPumpAdd();return;}
   addPumpMode=true;addPumpLat=null;addPumpLng=null;editPumpId=null;
   document.getElementById('pumpCoords').textContent='اضغط على الخريطة لتحديد موقع دور الضخ';
-  ['pumpName','pumpProvince','pumpVillage','pumpNeighborhood','pumpCapacity','pumpDesc'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  ['pumpName','pumpProvince','pumpVillage','pumpNeighborhood','pumpCapacity','pumpDesc','pumpDate','pumpTime','pumpDuration'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('pumpPolyStatus').textContent='لم يتم رسم حدود الحي بعد';
   pumpPolyPts=[];if(pumpPolyLayer){MI.removeLayer(pumpPolyLayer);pumpPolyLayer=null;}
   MI.getContainer().style.cursor='crosshair';
@@ -1495,10 +1507,13 @@ function savePump(){
   var village=document.getElementById('pumpVillage').value.trim();
   var neighborhood=document.getElementById('pumpNeighborhood').value.trim();
   var capacity=document.getElementById('pumpCapacity').value.trim();
+  var pumpDate=document.getElementById('pumpDate').value;
+  var pumpTime=document.getElementById('pumpTime').value;
+  var pumpDuration=document.getElementById('pumpDuration').value.trim();
   var desc=document.getElementById('pumpDesc').value.trim();
   var m=ap(addPumpLat,addPumpLng,name,desc,'pumps');
   var pt=pumps[pumps.length-1];
-  if(pt){pt.province=province;pt.village=village;pt.neighborhood=neighborhood;pt.capacity=capacity;pt.polygon=pumpPolyPts.length>2?pumpPolyPts:null;}
+  if(pt){pt.province=province;pt.village=village;pt.neighborhood=neighborhood;pt.capacity=capacity;pt.pumpDate=pumpDate;pt.pumpTime=pumpTime;pt.pumpDuration=pumpDuration;pt.polygon=pumpPolyPts.length>2?pumpPolyPts:null;}
   mc('pumpModal');addPumpMode=false;editPumpId=null;MI.getContainer().style.cursor='';
   if(pumpPolyLayer){MI.removeLayer(pumpPolyLayer);pumpPolyLayer=null;}
   pumpPolyPts=[];
@@ -1547,6 +1562,9 @@ function editPump(id){
   document.getElementById('pumpVillage').value=pt.village||'';
   document.getElementById('pumpNeighborhood').value=pt.neighborhood||'';
   document.getElementById('pumpCapacity').value=pt.capacity||'';
+  document.getElementById('pumpDate').value=pt.pumpDate||'';
+  document.getElementById('pumpTime').value=pt.pumpTime||'';
+  document.getElementById('pumpDuration').value=pt.pumpDuration||'';
   document.getElementById('pumpDesc').value=pt.desc||'';
   pumpPolyPts=pt.polygon?pt.polygon.map(function(p){return [p[0],p[1]];}):[];
   if(pumpPolyPts.length>2){
@@ -1558,13 +1576,57 @@ function editPump(id){
   mc('importModal'); // close import modal if open
 }
 
+// ===== PUMP NOTIFICATION =====
+function notifyPump(id){
+  var pt=pumps.find(function(x){return x.id===id;});
+  if(!pt){tt('لم يتم العثور على دور الضخ','err');return;}
+  // Build notification message
+  var msg='🏭 *إشعار دور ضخ*\n';
+  msg+='📌 '+pt.name+'\n';
+  if(pt.province||pt.village||pt.neighborhood)msg+='📍 '+(pt.province||'')+(pt.village?' / '+pt.village:'')+(pt.neighborhood?' / '+pt.neighborhood:'')+'\n';
+  if(pt.capacity)msg+='💧 كمية الضخ: '+pt.capacity+' م³/ساعة\n';
+  if(pt.pumpDate)msg+='📅 التاريخ: '+pt.pumpDate+'\n';
+  if(pt.pumpTime)msg+='🕐 وقت البدء: '+pt.pumpTime+'\n';
+  if(pt.pumpDuration)msg+='⏱ المدة: '+pt.pumpDuration+' ساعة\n';
+  if(pt.desc)msg+='📝 '+pt.desc+'\n';
+  msg+='\n⚠️ الرجاء تعبئة خزاناتكم خلال فترة الضخ\nشكراً لتعاونكم';
+  // Find subscribers inside pump polygon
+  var subsIn=[];
+  if(pt.polygon&&pt.polygon.length>2){
+    var verts=pt.polygon.map(function(c){return [c[1],c[0]];});
+    subs.forEach(function(s){try{if(ptInPoly(s.lng,s.lat,verts))subsIn.push(s);}catch(e){}});
+  }
+  if(subsIn.length){
+    var listHtml='<div style="max-height:200px;overflow-y:auto;margin:6px 0">';
+    subsIn.forEach(function(s){listHtml+='<div style="font-size:11px;padding:2px 0">📞 '+s.name+(s.phone?' ('+s.phone+')':'')+'</div>';});
+    listHtml+='</div>';
+    var waMsg=encodeURIComponent(msg);
+    // Create WhatsApp group link with first 5 numbers
+    var phones=subsIn.map(function(s){return s.phone?s.phone.replace(/[^0-9]/g,''):'';}).filter(function(p){return p.length>7;});
+    var waLink='https://wa.me/?text='+waMsg;
+    if(phones.length)waLink='https://api.whatsapp.com/send?text='+waMsg;
+    document.getElementById('statsContent').innerHTML=
+      '<b>📢 إرسال إشعار</b><br><br>'+
+      '<div style="background:rgba(255,255,255,.05);padding:8px;border-radius:6px;font-size:12px;direction:ltr;text-align:left;white-space:pre-wrap;font-family:monospace">'+msg+'</div><br>'+
+      '<b>👥 المشتركين في المنطقة ('+subsIn.length+'):</b>'+listHtml+
+      '<button class="modal-btn primary" onclick="window.open(\''+waLink+'\')">📱 فتح واتساب</button>'+
+      '<button class="modal-btn secondary" onclick="copyText(\''+encodeURIComponent(msg.replace(/'/g,"\\'"))+'\')">📋 نسخ الرسالة</button>'+
+      '<button class="modal-btn secondary" onclick="mc(\'statsModal\')">إغلاق</button>';
+    mo('statsModal');
+  }else{
+    if(!confirm('لم يتم تحديد مشتركين في المنطقة. هل تريد فتح واتساب بالرسالة؟'))return;
+    window.open('https://wa.me/?text='+encodeURIComponent(msg));
+  }
+}
+function copyText(t){var d=document.createElement('textarea');d.value=decodeURIComponent(t);document.body.appendChild(d);d.select();document.execCommand('copy');document.body.removeChild(d);tt('✅ تم نسخ الرسالة','ok');}
+
 // ===== BACKUP =====
 function exportBackup(){
   var data={
     version:1,
     date:new Date().toISOString(),
     subs:subs.map(function(s){return {lat:s.lat,lng:s.lng,name:s.name,desc:s.desc,alt:s.alt,phone:s.phone,address:s.address,subId:s.subId,photo:s.photo||null,meterReading:s.meterReading||null};}),
-    pumps:pumps.map(function(p){return {lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,type:p.type,capacity:p.capacity,province:p.province,village:p.village,neighborhood:p.neighborhood,polygon:p.polygon};}),
+    pumps:pumps.map(function(p){return {lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,type:p.type,capacity:p.capacity,province:p.province,village:p.village,neighborhood:p.neighborhood,polygon:p.polygon,pumpDate:p.pumpDate,pumpTime:p.pumpTime,pumpDuration:p.pumpDuration};}),
     tanks:tanks.map(function(t){return {lat:t.lat,lng:t.lng,name:t.name,desc:t.desc,alt:t.alt};}),
     manholes:manholes.map(function(m){return {lat:m.lat,lng:m.lng,name:m.name,desc:m.desc,alt:m.alt};}),
     waterlines:waterlines.map(function(l){return {name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc};}),
@@ -1668,7 +1730,7 @@ function importHoodFiles(files){
         label._hoodId=id;DI.addLayer(label);
         hoods.push({id:id,name:data.hood.name,color:data.hood.color||'#3366FF',layer:poly,label:label});
         if(data.subs)data.subs.forEach(function(s){ap(s.lat,s.lng,s.name||'',s.desc||'','subscribers',s.alt,s.subId||'');var pt=subs[subs.length-1];if(pt){pt.phone=s.phone||'';pt.address=s.address||'';pt.photo=s.photo||null;pt.meterReading=s.meterReading||null;}cnt++;});
-      if(data.pumps)data.pumps.forEach(function(p){var m=ap(p.lat,p.lng,p.name||'',p.desc||'',p.type||'pumps',p.alt);var pt=pumps[pumps.length-1];if(pt&&p.type==='pumps'){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;}cnt++;});
+      if(data.pumps)data.pumps.forEach(function(p){var m=ap(p.lat,p.lng,p.name||'',p.desc||'',p.type||'pumps',p.alt);var pt=pumps[pumps.length-1];if(pt&&p.type==='pumps'){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;pt.pumpDate=p.pumpDate||'';pt.pumpTime=p.pumpTime||'';pt.pumpDuration=p.pumpDuration||'';}cnt++;});
         if(data.tanks)data.tanks.forEach(function(t){ap(t.lat,t.lng,t.name||'',t.desc||'','tank',t.alt);cnt++;});
         if(data.manholes)data.manholes.forEach(function(m){ap(m.lat,m.lng,m.name||'',m.desc||'','manhole',m.alt);cnt++;});
         if(data.waterlines)data.waterlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','waterline');cnt++;});
@@ -1694,7 +1756,7 @@ function importBackup(files){
       if(!confirm('هل تريد استيراد النسخة؟ (سيتم إضافة البيانات للموجودة)'))return;
       var cnt=0;
       if(data.subs)data.subs.forEach(function(s){ap(s.lat,s.lng,s.name||'',s.desc||'','subscribers',s.alt,s.subId||'');var pt=subs[subs.length-1];if(pt){pt.phone=s.phone||'';pt.address=s.address||'';pt.subId=s.subId||'';pt.photo=s.photo||null;pt.meterReading=s.meterReading||null;}cnt++;});
-      if(data.pumps)data.pumps.forEach(function(p){var m=ap(p.lat,p.lng,p.name||'',p.desc||'',p.type||'pumps',p.alt);var pt=pumps[pumps.length-1];if(pt&&p.type==='pumps'){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;}cnt++;});
+      if(data.pumps)data.pumps.forEach(function(p){var m=ap(p.lat,p.lng,p.name||'',p.desc||'',p.type||'pumps',p.alt);var pt=pumps[pumps.length-1];if(pt&&p.type==='pumps'){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;pt.pumpDate=p.pumpDate||'';pt.pumpTime=p.pumpTime||'';pt.pumpDuration=p.pumpDuration||'';}cnt++;});
       if(data.tanks)data.tanks.forEach(function(t){ap(t.lat,t.lng,t.name||'',t.desc||'','tank',t.alt);cnt++;});
       if(data.manholes)data.manholes.forEach(function(m){ap(m.lat,m.lng,m.name||'',m.desc||'','manhole',m.alt);cnt++;});
       if(data.waterlines)data.waterlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','waterline');cnt++;});
@@ -1917,6 +1979,13 @@ function showStats(){
       html+='<div style="margin:6px 0;padding:8px;background:rgba(255,255,255,.05);border-radius:6px;border-right:3px solid #E65100">';
       html+='<b style="font-size:12px">🏭 '+p.name+'</b>';
       if(p.province||p.village||p.neighborhood)html+='<br><span style="color:#90CAF9;font-size:10px">'+(p.province||'')+(p.village?' / '+p.village:'')+(p.neighborhood?' / '+p.neighborhood:'')+'</span>';
+      if(p.pumpDate||p.pumpTime||p.pumpDuration){
+        html+='<br><span style="color:#FFD54F;font-size:10px">⏱ ';
+        if(p.pumpDate)html+=p.pumpDate+' ';
+        if(p.pumpTime)html+=p.pumpTime+' ';
+        if(p.pumpDuration)html+='('+p.pumpDuration+' س)';
+        html+='</span>';
+      }
       if(p.capacity){
         var daily=parseFloat(p.capacity)*24;
         html+='<br><span style="font-size:11px">💧 كمية الضخ: <b>'+p.capacity+'</b> م³/ساعة</span>';
