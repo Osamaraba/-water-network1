@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#1565C0">
+<meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="pragma" content="no-cache">
+<meta http-equiv="expires" content="0">
 <title>شركة مياه اليرموك</title>
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
@@ -96,9 +99,9 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 
 <div class="indicator" id="drawIndicator">✏️ اسحب على الخريطة لرسم الحي</div>
 
-<button class="fab" id="fabCenter" onclick="cc()" style="right:14px">📍</button>
-<button class="fab" onclick="locateMe()" style="right:66px;border-color:#42A5F5">🎯</button>
-<button class="fab" onclick="toggleSidePanel()" style="right:14px;left:auto;border-color:#66BB6A;font-size:14px" id="sideToggle">☰</button>
+<button class="fab" id="fabCenter" onclick="cc()" style="right:14px;bottom:128px" title="مركز الخريطة">📍</button>
+<button class="fab" onclick="locateMe()" style="right:14px;bottom:68px;border-color:#42A5F5" title="تحديد موقعي">🎯</button>
+<button class="fab" onclick="toggleSidePanel()" style="right:66px;bottom:68px;border-color:#66BB6A;font-size:14px" id="sideToggle" title="طبقات">☰</button>
 
 <div class="side-panel" id="sidePanel">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -332,7 +335,6 @@ var pendingLayer=null; // holds the drawn polygon until name is given
 // ===== MAP INIT =====
 if(typeof L==='undefined'){
   document.getElementById('map').innerHTML='<div style="padding:40px;text-align:center;color:#ef5350">⚠️ فشل تحميل مكتبة الخريطة. تحقق من اتصال الإنترنت.</div>';
-  var hidel=function(){};
 }else{
 MI=L.map('map',{center:[32.3499,35.7483],zoom:13,zoomControl:false,attributionControl:false});
 var tileSources=[
@@ -1854,16 +1856,13 @@ function locateMe(){
 
 // ===== SERVICE WORKER =====
 if('serviceWorker'in navigator){
-  navigator.serviceWorker.register('service-worker.js').then(function(reg){
-    reg.update();
-    if(reg.waiting)location.reload();
-    reg.addEventListener('updatefound',function(){
-      var sw=reg.installing;
-      sw.addEventListener('statechange',function(){
-        if(sw.state==='installed'&&navigator.serviceWorker.controller)location.reload();
-      });
-    });
-  }).catch(function(){});
+  // Unregister all old SW first, then register fresh
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(r){r.unregister();});
+    navigator.serviceWorker.register('service-worker.js?v=5').then(function(reg){
+      reg.update();
+    }).catch(function(){});
+  });
 }
 loadSavedData();
 hidel();
