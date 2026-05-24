@@ -130,6 +130,7 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 <button class="tool-btn" id="btnAddSub" onclick="startAddSub()" title="إضافة مشترك"><span>🧑‍🌾</span><span class="label">مشترك</span></button>
 <button class="tool-btn" id="btnDraw" onclick="td()"><span>✏️</span><span class="label">رسم</span></button>
 <button class="tool-btn pump" id="btnPumps" onclick="tp()"><span>🏭</span><span class="label">المواقع</span></button>
+<button class="tool-btn green" onclick="startAddPump()" title="إضافة دور ضخ"><span>➕</span><span class="label">إضافة</span></button>
 <button class="tool-btn" onclick="mo('neighborhoodsModal')"><span>🏘️</span><span class="label">الأحياء</span></button>
 <button class="tool-btn green" onclick="ex()"><span>📊</span><span class="label">Excel</span></button>
 <button class="tool-btn" onclick="fe()"><span>🏔️</span><span class="label">ارتفاعات</span></button>
@@ -208,6 +209,24 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 <textarea id="addSubDesc" rows="2" placeholder="ملاحظات"></textarea>
 <button class="modal-btn primary" onclick="saveNewSub()">💾 حفظ المشترك</button>
 <button class="modal-btn secondary" onclick="mc('addSubModal');addSubMode=false">إلغاء</button>
+</div></div>
+
+<!-- Add Pump Modal -->
+<div class="modal-overlay" id="pumpModal"><div class="modal">
+<h2>🏭 دور ضخ</h2>
+<p id="pumpCoords" style="color:#4FC3F7;font-size:11px;text-align:center">اضغط على الخريطة لتحديد الموقع</p>
+<input type="text" id="pumpName" placeholder="الاسم">
+<input type="text" id="pumpProvince" placeholder="المحافظة (مثال: عجلون)">
+<input type="text" id="pumpVillage" placeholder="القرية (مثال: عين جنا)">
+<input type="text" id="pumpNeighborhood" placeholder="الحي (مثال: الشرق)">
+<input type="text" id="pumpCapacity" placeholder="كمية الضخ (م³/ساعة)" dir="ltr" style="text-align:left">
+<textarea id="pumpDesc" rows="2" placeholder="ملاحظات"></textarea>
+<div style="display:flex;gap:6px;margin:4px 0">
+<button class="modal-btn" style="flex:1;background:#37474F;font-size:11px" id="pumpPolyBtn" onclick="startPumpPolygon()">🗺️ رسم حدود الحي</button>
+</div>
+<p id="pumpPolyStatus" style="color:#888;font-size:10px;text-align:center">لم يتم رسم حدود الحي بعد</p>
+<button class="modal-btn primary" onclick="savePump()">💾 حفظ دور الضخ</button>
+<button class="modal-btn secondary" onclick="mc('pumpModal');cancelPumpAdd()">إلغاء</button>
 </div></div>
 
 <!-- Complaint Modal -->
@@ -340,6 +359,7 @@ var SL,PL,IL,KL,TL,MHL,WTL,STL,GTL,CL,DI,MI;
 var drawMode=false,pumpVis=true;
 var myLocMarker=null;
 var pendingLayer=null; // holds the drawn polygon until name is given
+var addPumpMode=false,addPumpLat=null,addPumpLng=null,editPumpId=null,pumpPolyLayer=null,pumpPolyPts=[];
 
 // ===== MAP INIT =====
 if(typeof L==='undefined'){
@@ -697,7 +717,7 @@ function ap(lat,lon,name,desc,type,alt,subId){
   pt.type=type;
   if(type==='pumps'||type==='inspection'||type==='pumpstop'||type==='tank'||type==='manhole'||type==='complaint'){
     var cls,icon,col,label,layer,arr;
-    if(type==='pumps'){cls='pump-mkr';icon='🏭';col='#E65100';label='دور ضخ';layer=PL;arr=pumps;pt.capacity='';}
+    if(type==='pumps'){cls='pump-mkr';icon='🏭';col='#E65100';label='دور ضخ';layer=PL;arr=pumps;pt.capacity=pt.capacity||'';pt.province=pt.province||'';pt.village=pt.village||'';pt.neighborhood=pt.neighborhood||'';pt.polygon=pt.polygon||null;}
     else if(type==='inspection'){cls='insp-mkr';icon='👁️';col='#E91E63';label='نظارة / انظار';layer=IL;arr=pumps;}
     else if(type==='pumpstop'){cls='stop-mkr';icon='⛔';col='#B71C1C';label='توقف الضخ';layer=KL;arr=pumps;}
     else if(type==='tank'){cls='tank-mkr';icon='🚰';col='#00BCD4';label='خزان مياه';layer=TL;arr=tanks;}
@@ -706,8 +726,13 @@ function ap(lat,lon,name,desc,type,alt,subId){
     arr.push(pt);
     var m=L.marker([lat,lon],{icon:L.divIcon({className:cls,html:'<div>'+icon+'</div>',iconSize:[26,26],iconAnchor:[13,13]})});
     var popup='<b style="color:'+col+'">'+pt.name+'</b><br><span style="color:#888;font-size:11px">'+(pt.desc||label)+'</span>';
+    if(type==='pumps'){
+      if(pt.capacity)popup+='<br><span style="font-size:11px">💧 '+pt.capacity+' م³/ساعة</span>';
+      if(pt.province||pt.village||pt.neighborhood)popup+='<br><span style="color:#90CAF9;font-size:10px">'+(pt.province||'')+(pt.village?' | '+pt.village:'')+(pt.neighborhood?' | '+pt.neighborhood:'')+'</span>';
+    }
     if(pt.alt!==null){popup+='<br><span style="color:#aaa;font-size:10px">ارتفاع: '+pt.alt.toFixed(1)+' م</span>';popup+=elevDiff(pt);}
     popup+='<br><button class="wa-popup-btn" onclick="waPopupPump(\''+id+'\')">📱 واتساب</button>';
+    if(type==='pumps')popup+=' <button class="wa-popup-btn" style="background:#1565C0" onclick="editPump(\''+id+'\')">✏️ تعديل</button>';
     m.bindPopup(popup);m._pid=id;layer.addLayer(m);
   }else{
     subs.push(pt);
@@ -1212,7 +1237,7 @@ function saveData(){
   try{
     var data={
       subs:subs.map(function(s){return {id:s.id,lat:s.lat,lng:s.lng,name:s.name,desc:s.desc,alt:s.alt,phone:s.phone,address:s.address,subId:s.subId,photo:s.photo||null,meterReading:s.meterReading||null};}),
-      pumps:pumps.map(function(p){return {id:p.id,lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,capacity:p.capacity,type:p.type};}),
+      pumps:pumps.map(function(p){return {id:p.id,lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,capacity:p.capacity,type:p.type,province:p.province||'',village:p.village||'',neighborhood:p.neighborhood||'',polygon:p.polygon||null};}),
       tanks:tanks.map(function(t){return {id:t.id,lat:t.lat,lng:t.lng,name:t.name,desc:t.desc,alt:t.alt};}),
       manholes:manholes.map(function(m){return {id:m.id,lat:m.lat,lng:m.lng,name:m.name,desc:m.desc,alt:m.alt};}),
       waterlines:waterlines.map(function(l){return {id:l.id,name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc};}),
@@ -1332,8 +1357,13 @@ function loadSavedData(){
     });
     if(data.pumps)data.pumps.forEach(function(p){
       var t=p.type||'pumps';
-      ap(p.lat,p.lng,p.name,p.desc,t,p.alt);
+      var m=ap(p.lat,p.lng,p.name,p.desc,t,p.alt);
+      if(t==='pumps'){
+        var pt=pumps[pumps.length-1];
+        if(pt){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;}
+      }
     });
+    renderPumpPolygons();
     if(data.tanks)data.tanks.forEach(function(t){ap(t.lat,t.lng,t.name||'',t.desc||'','tank',t.alt);});
     if(data.manholes)data.manholes.forEach(function(m){ap(m.lat,m.lng,m.name||'',m.desc||'','manhole',m.alt);});
     if(data.waterlines)data.waterlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','waterline');});
@@ -1372,6 +1402,12 @@ function startAddSub(){
   tt('🧑‍🌾 اضغط على الخريطة لإضافة مشترك','inf');
 }
 if(MI)MI.on('click',function(e){
+  if(addPumpMode){
+    addPumpLat=e.latlng.lat;addPumpLng=e.latlng.lng;
+    document.getElementById('pumpCoords').innerHTML='📍 '+addPumpLat.toFixed(6)+', '+addPumpLng.toFixed(6);
+    mo('pumpModal');
+    return;
+  }
   if(!addSubMode)return;
   addSubLat=e.latlng.lat;addSubLng=e.latlng.lng;
   document.getElementById('addSubCoords').innerHTML='📍 '+addSubLat.toFixed(6)+', '+addSubLng.toFixed(6);
@@ -1424,13 +1460,111 @@ function processMeterOCR(){
   }).catch(function(){tt('فشل قراءة العداد','err');});
 }
 
+// ===== PUMP ADD/EDIT =====
+function startAddPump(){
+  if(addPumpMode){cancelPumpAdd();return;}
+  addPumpMode=true;addPumpLat=null;addPumpLng=null;editPumpId=null;
+  document.getElementById('pumpCoords').textContent='اضغط على الخريطة لتحديد موقع دور الضخ';
+  ['pumpName','pumpProvince','pumpVillage','pumpNeighborhood','pumpCapacity','pumpDesc'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('pumpPolyStatus').textContent='لم يتم رسم حدود الحي بعد';
+  pumpPolyPts=[];if(pumpPolyLayer){MI.removeLayer(pumpPolyLayer);pumpPolyLayer=null;}
+  MI.getContainer().style.cursor='crosshair';
+  tt('🏭 اضغط على الخريطة لإضافة دور ضخ','inf');
+}
+function cancelPumpAdd(){
+  addPumpMode=false;editPumpId=null;MI.getContainer().style.cursor='';
+  if(pumpPolyLayer){MI.removeLayer(pumpPolyLayer);pumpPolyLayer=null;}
+  pumpPolyPts=[];mc('pumpModal');
+}
+function savePump(){
+  if(addPumpLat===null||addPumpLng===null){tt('الرجاء اختيار موقع على الخريطة','err');return;}
+  if(editPumpId){
+    var oldPump=pumps.find(function(x){return x.id===editPumpId;});
+    if(oldPump){
+      // Remove old marker from map
+      PL.eachLayer(function(l){if(l._pid===editPumpId)PL.removeLayer(l);});
+      // Remove old polygon
+      PL.eachLayer(function(l){if(l._pumpId===editPumpId)PL.removeLayer(l);});
+      // Remove from array
+      var idx=pumps.indexOf(oldPump);
+      if(idx>-1)pumps.splice(idx,1);
+    }
+  }
+  var name=document.getElementById('pumpName').value.trim()||'دور ضخ';
+  var province=document.getElementById('pumpProvince').value.trim();
+  var village=document.getElementById('pumpVillage').value.trim();
+  var neighborhood=document.getElementById('pumpNeighborhood').value.trim();
+  var capacity=document.getElementById('pumpCapacity').value.trim();
+  var desc=document.getElementById('pumpDesc').value.trim();
+  var m=ap(addPumpLat,addPumpLng,name,desc,'pumps');
+  var pt=pumps[pumps.length-1];
+  if(pt){pt.province=province;pt.village=village;pt.neighborhood=neighborhood;pt.capacity=capacity;pt.polygon=pumpPolyPts.length>2?pumpPolyPts:null;}
+  mc('pumpModal');addPumpMode=false;editPumpId=null;MI.getContainer().style.cursor='';
+  if(pumpPolyLayer){MI.removeLayer(pumpPolyLayer);pumpPolyLayer=null;}
+  pumpPolyPts=[];
+  if(pt.polygon)drawPumpPolygon(pt.id,pt.polygon);
+  cc();saveData();tt('✅ تم حفظ دور الضخ','ok');
+}
+function drawPumpPolygon(pumpId,pts){
+  if(!pts||pts.length<3)return;
+  var poly=L.polygon(pts,{color:'#E65100',fillColor:'#E65100',fillOpacity:0.08,weight:2,dashArray:'5,5'});
+  poly._pumpId=pumpId;PL.addLayer(poly);
+}
+function renderPumpPolygons(){
+  pumps.forEach(function(p){
+    if(p.type==='pumps'&&p.polygon&&p.polygon.length>2)drawPumpPolygon(p.id,p.polygon);
+  });
+}
+function startPumpPolygon(){
+  if(!addPumpMode&&!editPumpId){tt('أضف دور الضخ أولاً','err');return;}
+  if(pumpPolyLayer){MI.removeLayer(pumpPolyLayer);pumpPolyLayer=null;}
+  pumpPolyPts=[];document.getElementById('pumpPolyStatus').textContent='اضغط على الخريطة لرسم حدود الحي (نقاط متتالية)';
+  var clickHandler=function(e){
+    pumpPolyPts.push([e.latlng.lat,e.latlng.lng]);
+    if(pumpPolyLayer)MI.removeLayer(pumpPolyLayer);
+    if(pumpPolyPts.length>2)pumpPolyLayer=L.polygon(pumpPolyPts,{color:'#E65100',fillColor:'#E65100',fillOpacity:0.12,weight:2}).addTo(MI);
+    else pumpPolyLayer=L.polyline(pumpPolyPts,{color:'#E65100',weight:2}).addTo(MI);
+    document.getElementById('pumpPolyStatus').textContent='✅ تم إضافة نقطة (المجموع: '+pumpPolyPts.length+'). اضغط finish للإنهاء';
+  };
+  MI.on('click',clickHandler);
+  document.getElementById('pumpPolyBtn').textContent='✅ إنهاء الرسم';
+  document.getElementById('pumpPolyBtn').onclick=function(){
+    if(pumpPolyPts.length<3){tt('يلزم 3 نقاط على الأقل لرسم المضلع','err');return;}
+    MI.off('click',clickHandler);
+    document.getElementById('pumpPolyBtn').textContent='🗺️ رسم حدود الحي';
+    document.getElementById('pumpPolyBtn').onclick=function(){startPumpPolygon();};
+    document.getElementById('pumpPolyStatus').textContent='✅ تم رسم حدود الحي ('+pumpPolyPts.length+' نقطة)';
+    tt('✅ تم رسم حدود الحي','ok');
+  };
+}
+function editPump(id){
+  var pt=pumps.find(function(x){return x.id===id;});
+  if(!pt){tt('لم يتم العثور على دور الضخ','err');return;}
+  addPumpMode=true;addPumpLat=pt.lat;addPumpLng=pt.lng;editPumpId=id;
+  document.getElementById('pumpCoords').textContent='📍 '+pt.lat.toFixed(6)+', '+pt.lng.toFixed(6);
+  document.getElementById('pumpName').value=pt.name||'';
+  document.getElementById('pumpProvince').value=pt.province||'';
+  document.getElementById('pumpVillage').value=pt.village||'';
+  document.getElementById('pumpNeighborhood').value=pt.neighborhood||'';
+  document.getElementById('pumpCapacity').value=pt.capacity||'';
+  document.getElementById('pumpDesc').value=pt.desc||'';
+  pumpPolyPts=pt.polygon?pt.polygon.map(function(p){return [p[0],p[1]];}):[];
+  if(pumpPolyPts.length>2){
+    if(pumpPolyLayer)MI.removeLayer(pumpPolyLayer);
+    pumpPolyLayer=L.polygon(pumpPolyPts,{color:'#E65100',fillColor:'#E65100',fillOpacity:0.12,weight:2}).addTo(MI);
+    document.getElementById('pumpPolyStatus').textContent='✅ حدود الحي موجودة ('+pumpPolyPts.length+' نقطة)';
+  }else document.getElementById('pumpPolyStatus').textContent='لم يتم رسم حدود الحي بعد';
+  mo('pumpModal');
+  mc('importModal'); // close import modal if open
+}
+
 // ===== BACKUP =====
 function exportBackup(){
   var data={
     version:1,
     date:new Date().toISOString(),
     subs:subs.map(function(s){return {lat:s.lat,lng:s.lng,name:s.name,desc:s.desc,alt:s.alt,phone:s.phone,address:s.address,subId:s.subId,photo:s.photo||null,meterReading:s.meterReading||null};}),
-    pumps:pumps.map(function(p){return {lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,type:p.type};}),
+    pumps:pumps.map(function(p){return {lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,type:p.type,capacity:p.capacity,province:p.province,village:p.village,neighborhood:p.neighborhood,polygon:p.polygon};}),
     tanks:tanks.map(function(t){return {lat:t.lat,lng:t.lng,name:t.name,desc:t.desc,alt:t.alt};}),
     manholes:manholes.map(function(m){return {lat:m.lat,lng:m.lng,name:m.name,desc:m.desc,alt:m.alt};}),
     waterlines:waterlines.map(function(l){return {name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc};}),
@@ -1534,7 +1668,7 @@ function importHoodFiles(files){
         label._hoodId=id;DI.addLayer(label);
         hoods.push({id:id,name:data.hood.name,color:data.hood.color||'#3366FF',layer:poly,label:label});
         if(data.subs)data.subs.forEach(function(s){ap(s.lat,s.lng,s.name||'',s.desc||'','subscribers',s.alt,s.subId||'');var pt=subs[subs.length-1];if(pt){pt.phone=s.phone||'';pt.address=s.address||'';pt.photo=s.photo||null;pt.meterReading=s.meterReading||null;}cnt++;});
-        if(data.pumps)data.pumps.forEach(function(p){ap(p.lat,p.lng,p.name||'',p.desc||'',p.type||'pumps',p.alt);cnt++;});
+      if(data.pumps)data.pumps.forEach(function(p){var m=ap(p.lat,p.lng,p.name||'',p.desc||'',p.type||'pumps',p.alt);var pt=pumps[pumps.length-1];if(pt&&p.type==='pumps'){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;}cnt++;});
         if(data.tanks)data.tanks.forEach(function(t){ap(t.lat,t.lng,t.name||'',t.desc||'','tank',t.alt);cnt++;});
         if(data.manholes)data.manholes.forEach(function(m){ap(m.lat,m.lng,m.name||'',m.desc||'','manhole',m.alt);cnt++;});
         if(data.waterlines)data.waterlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','waterline');cnt++;});
@@ -1560,7 +1694,7 @@ function importBackup(files){
       if(!confirm('هل تريد استيراد النسخة؟ (سيتم إضافة البيانات للموجودة)'))return;
       var cnt=0;
       if(data.subs)data.subs.forEach(function(s){ap(s.lat,s.lng,s.name||'',s.desc||'','subscribers',s.alt,s.subId||'');var pt=subs[subs.length-1];if(pt){pt.phone=s.phone||'';pt.address=s.address||'';pt.subId=s.subId||'';pt.photo=s.photo||null;pt.meterReading=s.meterReading||null;}cnt++;});
-      if(data.pumps)data.pumps.forEach(function(p){ap(p.lat,p.lng,p.name||'',p.desc||'',p.type||'pumps',p.alt);cnt++;});
+      if(data.pumps)data.pumps.forEach(function(p){var m=ap(p.lat,p.lng,p.name||'',p.desc||'',p.type||'pumps',p.alt);var pt=pumps[pumps.length-1];if(pt&&p.type==='pumps'){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;}cnt++;});
       if(data.tanks)data.tanks.forEach(function(t){ap(t.lat,t.lng,t.name||'',t.desc||'','tank',t.alt);cnt++;});
       if(data.manholes)data.manholes.forEach(function(m){ap(m.lat,m.lng,m.name||'',m.desc||'','manhole',m.alt);cnt++;});
       if(data.waterlines)data.waterlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','waterline');cnt++;});
@@ -1775,6 +1909,38 @@ function showStats(){
   lineStats(sewerlines,'🟤','شبكة صرف صحي');
   lineStats(gravitylines,'🟣','مسارات الجباه');
   pointStats(pumps,'🏭','دور ضخ');
+  // Per-pump per-capita calculation
+  var pumpsOnly=pumps.filter(function(p){return !p.type||p.type==='pumps';});
+  if(pumpsOnly.length){
+    html+='<hr style="border-color:rgba(255,255,255,.1);margin:10px 0"><b style="font-size:14px">💧 دور الضخ - حصة الفرد</b>';
+    pumpsOnly.forEach(function(p){
+      html+='<div style="margin:6px 0;padding:8px;background:rgba(255,255,255,.05);border-radius:6px;border-right:3px solid #E65100">';
+      html+='<b style="font-size:12px">🏭 '+p.name+'</b>';
+      if(p.province||p.village||p.neighborhood)html+='<br><span style="color:#90CAF9;font-size:10px">'+(p.province||'')+(p.village?' / '+p.village:'')+(p.neighborhood?' / '+p.neighborhood:'')+'</span>';
+      if(p.capacity){
+        var daily=parseFloat(p.capacity)*24;
+        html+='<br><span style="font-size:11px">💧 كمية الضخ: <b>'+p.capacity+'</b> م³/ساعة</span>';
+        html+='<br><span style="font-size:11px">📅 إنتاج يومي: <b>'+daily.toFixed(1)+'</b> م³/يوم</span>';
+        // Count subscribers inside pump polygon
+        if(p.polygon&&p.polygon.length>2){
+          var verts=p.polygon.map(function(c){return [c[1],c[0]];});
+          var subsIn=0;
+          subs.forEach(function(s){try{if(ptInPoly(s.lng,s.lat,verts))subsIn++;}catch(e){}});
+          html+='<br><span style="font-size:11px">👥 مشتركين داخل الحي: <b>'+subsIn+'</b></span>';
+          if(subsIn>0){
+            var perCapita=daily/subsIn;
+            var perCapitaLiters=perCapita*1000;
+            html+='<br><span style="color:#4FC3F7;font-size:12px">📊 حصة الفرد: <b>'+perCapita.toFixed(2)+'</b> م³/فرد/يوم (<b>'+perCapitaLiters.toFixed(0)+'</b> لتر/فرد/يوم)</span>';
+            if(perCapitaLiters<50)html+=' <span style="color:#ef5350;font-size:11px">⚠️ غير كافٍ (أقل من 50 لتر/فرد/يوم)</span>';
+            else if(perCapitaLiters<100)html+=' <span style="color:#FFA726;font-size:11px">⚠️ منخفض (50-100 لتر/فرد/يوم)</span>';
+            else html+=' <span style="color:#66BB6A;font-size:11px">✅ جيد</span>';
+          }
+        }
+        else html+='<br><span style="color:#888;font-size:10px">⚠️ لم يتم رسم حدود الحي لحساب المشتركين</span>';
+      }else html+='<br><span style="color:#888;font-size:10px">⚠️ لم يتم إدخال كمية الضخ</span>';
+      html+='</div>';
+    });
+  }
   pointStats(tanks,'🚰','خزانات مياه');
   pointStats(manholes,'🕳️','مناهل صرف صحي');
   pointStats(pumps.filter(function(p){return p.type==='inspection';}),'👁️','نظارة');
