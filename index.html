@@ -1862,10 +1862,13 @@ function locateMe(){
 
 // ===== SERVICE WORKER =====
 if('serviceWorker'in navigator){
-  // Unregister all old SW first, then register fresh
   navigator.serviceWorker.getRegistrations().then(function(regs){
-    regs.forEach(function(r){r.unregister();});
-    navigator.serviceWorker.register('service-worker.js?v=5').then(function(reg){
+    if(regs.length){
+      regs.forEach(function(r){r.unregister();});
+      location.reload(true);
+      return;
+    }
+    navigator.serviceWorker.register('service-worker.js?v='+Date.now()).then(function(reg){
       reg.update();
     }).catch(function(){});
   });
@@ -1875,6 +1878,7 @@ hidel();
 // Diagnostic
 if(typeof L==='undefined')console.error('Leaflet L is undefined');
 if(!MI)console.error('Map MI is undefined');
+// Version: 2024-06-01
 </script>
 </body>
 </html>
