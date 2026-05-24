@@ -132,6 +132,11 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 </div>
 <div id="snapList" style="max-height:150px;overflow-y:auto;margin:4px 0"></div>
 <label style="margin-top:4px;text-align:center"><button class="modal-btn" style="padding:6px;font-size:11px;background:#1565C0" onclick="mo('backupModal')">💾 حفظ/استيراد ملف</button></label>
+<hr style="border-color:rgba(255,255,255,.1);margin:8px 0">
+<b style="font-size:14px">☁️ السحابة</b>
+<p id="syncStatus" style="color:#888;font-size:10px;margin:2px 0">غير متزامن</p>
+<label style="margin-top:4px;text-align:center"><button class="modal-btn" style="padding:6px;font-size:11px;background:#1565C0" onclick="fullSync()">☁️ مزامنة يدوية</button></label>
+<label class="chk-row" style="margin-top:2px"><span>🔄 مزامنة تلقائية</span><input type="checkbox" id="chkAutoSync" checked onchange="toggleAutoSync()"></label>
 </div>
 
 <div class="bottom-bar">
@@ -229,6 +234,13 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 <input type="text" id="pumpVillage" placeholder="القرية (مثال: عين جنا)">
 <input type="text" id="pumpNeighborhood" placeholder="الحي (مثال: الشرق)">
 <input type="text" id="pumpCapacity" placeholder="كمية الضخ (م³/ساعة)" dir="ltr" style="text-align:left">
+<div style="display:flex;gap:6px;margin:6px 0">
+<select id="pumpStatus" style="flex:1;padding:9px 10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#fff;font-size:13px;font-family:inherit">
+<option value="running">🟢 شغال</option>
+<option value="stopped">🔴 متوقف</option>
+</select>
+</div>
+<input type="date" id="pumpMaintenance" style="direction:ltr" title="آخر تاريخ صيانة">
 <div style="display:flex;gap:6px;margin:6px 0">
 <input type="date" id="pumpDate" style="flex:1;direction:ltr" title="تاريخ بداية الضخ">
 <input type="time" id="pumpTime" style="flex:1;direction:ltr" title="ساعة بداية الضخ">
@@ -374,6 +386,7 @@ var drawMode=false,pumpVis=true;
 var myLocMarker=null;
 var pendingLayer=null; // holds the drawn polygon until name is given
 var addPumpMode=false,addPumpLat=null,addPumpLng=null,editPumpId=null,pumpPolyLayer=null,pumpPolyPts=[];
+var accCircle=null;
 
 // ===== MAP INIT =====
 if(typeof L==='undefined'){
@@ -732,16 +745,25 @@ function ap(lat,lon,name,desc,type,alt,subId){
   pt.type=type;
   if(type==='pumps'||type==='inspection'||type==='pumpstop'||type==='tank'||type==='manhole'||type==='complaint'){
     var cls,icon,col,label,layer,arr;
-    if(type==='pumps'){cls='pump-mkr';icon='🏭';col='#E65100';label='دور ضخ';layer=PL;arr=pumps;pt.capacity=pt.capacity||'';pt.province=pt.province||'';pt.village=pt.village||'';pt.neighborhood=pt.neighborhood||'';pt.polygon=pt.polygon||null;pt.pumpDate=pt.pumpDate||'';pt.pumpTime=pt.pumpTime||'';pt.pumpDuration=pt.pumpDuration||'';}
+    if(type==='pumps'){cls='pump-mkr';icon='🏭';col='#E65100';label='دور ضخ';layer=PL;arr=pumps;pt.capacity=pt.capacity||'';pt.province=pt.province||'';pt.village=pt.village||'';pt.neighborhood=pt.neighborhood||'';pt.polygon=pt.polygon||null;pt.pumpDate=pt.pumpDate||'';pt.pumpTime=pt.pumpTime||'';pt.pumpDuration=pt.pumpDuration||'';pt.pumpStatus=pt.pumpStatus||'running';pt.lastMaintenance=pt.lastMaintenance||'';}
     else if(type==='inspection'){cls='insp-mkr';icon='👁️';col='#E91E63';label='نظارة / انظار';layer=IL;arr=pumps;}
     else if(type==='pumpstop'){cls='stop-mkr';icon='⛔';col='#B71C1C';label='توقف الضخ';layer=KL;arr=pumps;}
     else if(type==='tank'){cls='tank-mkr';icon='🚰';col='#00BCD4';label='خزان مياه';layer=TL;arr=tanks;}
     else if(type==='manhole'){cls='manhole-mkr';icon='🕳️';col='#5D4037';label='منهول صرف صحي';layer=MHL;arr=manholes;}
     else{cls='comp-mkr';icon='📋';col='#FF7043';label='بلاغ صيانة';layer=CL;arr=complaints;}
     arr.push(pt);
-    var m=L.marker([lat,lon],{icon:L.divIcon({className:cls,html:'<div>'+icon+'</div>',iconSize:[26,26],iconAnchor:[13,13]})});
+    if(type==='pumps'){
+      var stCol=pt.pumpStatus==='running'?'#4CAF50':'#ef5350';
+      var stIcon=pt.pumpStatus==='running'?'🟢':'🔴';
+      cls='pump-mkr';
+      icon=stIcon;
+      col=stCol;
+    }
+    var m=L.marker([lat,lon],{icon:L.divIcon({className:cls,html:'<div style="background:'+(type==='pumps'?'':col)+';border-color:'+col+'">'+icon+'</div>',iconSize:[26,26],iconAnchor:[13,13]})});
     var popup='<b style="color:'+col+'">'+pt.name+'</b><br><span style="color:#888;font-size:11px">'+(pt.desc||label)+'</span>';
     if(type==='pumps'){
+      if(pt.pumpStatus==='running')popup+='<br><span style="color:#4CAF50;font-size:11px">🟢 شغال</span>';
+      else popup+='<br><span style="color:#ef5350;font-size:11px">🔴 متوقف</span>';
       if(pt.capacity)popup+='<br><span style="font-size:11px">💧 '+pt.capacity+' م³/ساعة</span>';
       if(pt.pumpDate||pt.pumpTime||pt.pumpDuration){
         popup+='<br><span style="color:#FFD54F;font-size:10px">⏱ ';
@@ -750,6 +772,7 @@ function ap(lat,lon,name,desc,type,alt,subId){
         if(pt.pumpDuration)popup+='('+pt.pumpDuration+' س)';
         popup+='</span>';
       }
+      if(pt.lastMaintenance)popup+='<br><span style="color:#81C784;font-size:10px">🔧 آخر صيانة: '+pt.lastMaintenance+'</span>';
       if(pt.province||pt.village||pt.neighborhood)popup+='<br><span style="color:#90CAF9;font-size:10px">'+(pt.province||'')+(pt.village?' | '+pt.village:'')+(pt.neighborhood?' | '+pt.neighborhood:'')+'</span>';
     }
     if(pt.alt!==null){popup+='<br><span style="color:#aaa;font-size:10px">ارتفاع: '+pt.alt.toFixed(1)+' م</span>';popup+=elevDiff(pt);}
@@ -1259,7 +1282,7 @@ function saveData(){
   try{
     var data={
       subs:subs.map(function(s){return {id:s.id,lat:s.lat,lng:s.lng,name:s.name,desc:s.desc,alt:s.alt,phone:s.phone,address:s.address,subId:s.subId,photo:s.photo||null,meterReading:s.meterReading||null};}),
-      pumps:pumps.map(function(p){return {id:p.id,lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,capacity:p.capacity,type:p.type,province:p.province||'',village:p.village||'',neighborhood:p.neighborhood||'',polygon:p.polygon||null,pumpDate:p.pumpDate||'',pumpTime:p.pumpTime||'',pumpDuration:p.pumpDuration||''};}),
+      pumps:pumps.map(function(p){return {id:p.id,lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,capacity:p.capacity,type:p.type,province:p.province||'',village:p.village||'',neighborhood:p.neighborhood||'',polygon:p.polygon||null,pumpDate:p.pumpDate||'',pumpTime:p.pumpTime||'',pumpDuration:p.pumpDuration||'',pumpStatus:p.pumpStatus||'running',lastMaintenance:p.lastMaintenance||''};}),
       tanks:tanks.map(function(t){return {id:t.id,lat:t.lat,lng:t.lng,name:t.name,desc:t.desc,alt:t.alt};}),
       manholes:manholes.map(function(m){return {id:m.id,lat:m.lat,lng:m.lng,name:m.name,desc:m.desc,alt:m.alt};}),
       waterlines:waterlines.map(function(l){return {id:l.id,name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc};}),
@@ -1308,6 +1331,7 @@ function syncToCloud(){
       if(x.status>=200&&x.status<300){
         localStorage.setItem('wpm_last_sync',now);
         tt('☁️ تم رفع البيانات للسحابة','ok');
+        updateSyncStatus('☁️ آخر رفع: '+new Date().toLocaleString('ar-SA'));
       } else if(x.status===404){
         // Row doesn't exist yet, try INSERT via POST
         var x2=new XMLHttpRequest();
@@ -1320,6 +1344,7 @@ function syncToCloud(){
           if(x2.status>=200&&x2.status<300){
             localStorage.setItem('wpm_last_sync',now);
             tt('☁️ تم رفع البيانات للسحابة','ok');
+            updateSyncStatus('☁️ آخر رفع: '+new Date().toLocaleString('ar-SA'));
           } else tt('☁️ خطأ في الرفع ('+x2.status+')','err');
         };
         x2.send(body);
@@ -1344,6 +1369,7 @@ function pullFromCloud(){
         var local=localStorage.getItem('wpm_last_sync');
         if(local&&r.date<=local){return;}
         tt('☁️ تم تحديث البيانات من السحابة','ok');
+        updateSyncStatus('☁️ آخر سحب: '+new Date(r.date).toLocaleString('ar-SA'));
         localStorage.setItem('wpm_data',JSON.stringify(r.data));
         localStorage.setItem('wpm_last_sync',r.date);
         if(document.querySelector('.leaflet-container'))location.reload();
@@ -1365,6 +1391,15 @@ function fullSync(){
     tt('☁️ جاري السحب من السحابة...','inf');
   },1500);
 }
+function toggleAutoSync(){
+  var on=document.getElementById('chkAutoSync').checked;
+  localStorage.setItem('wpm_auto_sync',on?'1':'');
+  tt(on?'☁️ مزامنة تلقائية: تشغيل':'☁️ مزامنة تلقائية: إيقاف','ok');
+}
+function updateSyncStatus(msg){
+  var el=document.getElementById('syncStatus');
+  if(el)el.textContent=msg||'جاري...';
+}
 
 function loadSavedData(){
   try{
@@ -1382,7 +1417,7 @@ function loadSavedData(){
       var m=ap(p.lat,p.lng,p.name,p.desc,t,p.alt);
       if(t==='pumps'){
         var pt=pumps[pumps.length-1];
-        if(pt){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;pt.pumpDate=p.pumpDate||'';pt.pumpTime=p.pumpTime||'';pt.pumpDuration=p.pumpDuration||'';}
+        if(pt){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;pt.pumpDate=p.pumpDate||'';pt.pumpTime=p.pumpTime||'';pt.pumpDuration=p.pumpDuration||'';pt.pumpStatus=p.pumpStatus||'running';pt.lastMaintenance=p.lastMaintenance||'';}
       }
     });
     renderPumpPolygons();
@@ -1520,10 +1555,12 @@ function savePump(){
   var pumpDate=document.getElementById('pumpDate').value;
   var pumpTime=document.getElementById('pumpTime').value;
   var pumpDuration=document.getElementById('pumpDuration').value.trim();
+  var pumpStatus=document.getElementById('pumpStatus').value;
+  var pumpMaintenance=document.getElementById('pumpMaintenance').value;
   var desc=document.getElementById('pumpDesc').value.trim();
   var m=ap(addPumpLat,addPumpLng,name,desc,'pumps');
   var pt=pumps[pumps.length-1];
-  if(pt){pt.province=province;pt.village=village;pt.neighborhood=neighborhood;pt.capacity=capacity;pt.pumpDate=pumpDate;pt.pumpTime=pumpTime;pt.pumpDuration=pumpDuration;pt.polygon=pumpPolyPts.length>2?pumpPolyPts:null;}
+  if(pt){pt.province=province;pt.village=village;pt.neighborhood=neighborhood;pt.capacity=capacity;pt.pumpDate=pumpDate;pt.pumpTime=pumpTime;pt.pumpDuration=pumpDuration;pt.pumpStatus=pumpStatus;pt.lastMaintenance=pumpMaintenance;pt.polygon=pumpPolyPts.length>2?pumpPolyPts:null;}
   mc('pumpModal');addPumpMode=false;editPumpId=null;MI.getContainer().style.cursor='';
   if(pumpPolyLayer){MI.removeLayer(pumpPolyLayer);pumpPolyLayer=null;}
   pumpPolyPts=[];
@@ -1575,6 +1612,8 @@ function editPump(id){
   document.getElementById('pumpDate').value=pt.pumpDate||'';
   document.getElementById('pumpTime').value=pt.pumpTime||'';
   document.getElementById('pumpDuration').value=pt.pumpDuration||'';
+  document.getElementById('pumpStatus').value=pt.pumpStatus||'running';
+  document.getElementById('pumpMaintenance').value=pt.lastMaintenance||'';
   document.getElementById('pumpDesc').value=pt.desc||'';
   pumpPolyPts=pt.polygon?pt.polygon.map(function(p){return [p[0],p[1]];}):[];
   if(pumpPolyPts.length>2){
@@ -1636,7 +1675,7 @@ function exportBackup(){
     version:1,
     date:new Date().toISOString(),
     subs:subs.map(function(s){return {lat:s.lat,lng:s.lng,name:s.name,desc:s.desc,alt:s.alt,phone:s.phone,address:s.address,subId:s.subId,photo:s.photo||null,meterReading:s.meterReading||null};}),
-    pumps:pumps.map(function(p){return {lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,type:p.type,capacity:p.capacity,province:p.province,village:p.village,neighborhood:p.neighborhood,polygon:p.polygon,pumpDate:p.pumpDate,pumpTime:p.pumpTime,pumpDuration:p.pumpDuration};}),
+    pumps:pumps.map(function(p){return {lat:p.lat,lng:p.lng,name:p.name,desc:p.desc,alt:p.alt,type:p.type,capacity:p.capacity,province:p.province,village:p.village,neighborhood:p.neighborhood,polygon:p.polygon,pumpDate:p.pumpDate,pumpTime:p.pumpTime,pumpDuration:p.pumpDuration,pumpStatus:p.pumpStatus,lastMaintenance:p.lastMaintenance};}),
     tanks:tanks.map(function(t){return {lat:t.lat,lng:t.lng,name:t.name,desc:t.desc,alt:t.alt};}),
     manholes:manholes.map(function(m){return {lat:m.lat,lng:m.lng,name:m.name,desc:m.desc,alt:m.alt};}),
     waterlines:waterlines.map(function(l){return {name:l.name,coords:l.coords,length:l.length,diameter:l.diameter,desc:l.desc};}),
@@ -1740,7 +1779,7 @@ function importHoodFiles(files){
         label._hoodId=id;DI.addLayer(label);
         hoods.push({id:id,name:data.hood.name,color:data.hood.color||'#3366FF',layer:poly,label:label});
         if(data.subs)data.subs.forEach(function(s){ap(s.lat,s.lng,s.name||'',s.desc||'','subscribers',s.alt,s.subId||'');var pt=subs[subs.length-1];if(pt){pt.phone=s.phone||'';pt.address=s.address||'';pt.photo=s.photo||null;pt.meterReading=s.meterReading||null;}cnt++;});
-      if(data.pumps)data.pumps.forEach(function(p){var m=ap(p.lat,p.lng,p.name||'',p.desc||'',p.type||'pumps',p.alt);var pt=pumps[pumps.length-1];if(pt&&p.type==='pumps'){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;pt.pumpDate=p.pumpDate||'';pt.pumpTime=p.pumpTime||'';pt.pumpDuration=p.pumpDuration||'';}cnt++;});
+      if(data.pumps)data.pumps.forEach(function(p){var m=ap(p.lat,p.lng,p.name||'',p.desc||'',p.type||'pumps',p.alt);var pt=pumps[pumps.length-1];if(pt&&p.type==='pumps'){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;pt.pumpDate=p.pumpDate||'';pt.pumpTime=p.pumpTime||'';pt.pumpDuration=p.pumpDuration||'';pt.pumpStatus=p.pumpStatus||'running';pt.lastMaintenance=p.lastMaintenance||'';}cnt++;});
         if(data.tanks)data.tanks.forEach(function(t){ap(t.lat,t.lng,t.name||'',t.desc||'','tank',t.alt);cnt++;});
         if(data.manholes)data.manholes.forEach(function(m){ap(m.lat,m.lng,m.name||'',m.desc||'','manhole',m.alt);cnt++;});
         if(data.waterlines)data.waterlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','waterline');cnt++;});
@@ -1766,7 +1805,7 @@ function importBackup(files){
       if(!confirm('هل تريد استيراد النسخة؟ (سيتم إضافة البيانات للموجودة)'))return;
       var cnt=0;
       if(data.subs)data.subs.forEach(function(s){ap(s.lat,s.lng,s.name||'',s.desc||'','subscribers',s.alt,s.subId||'');var pt=subs[subs.length-1];if(pt){pt.phone=s.phone||'';pt.address=s.address||'';pt.subId=s.subId||'';pt.photo=s.photo||null;pt.meterReading=s.meterReading||null;}cnt++;});
-      if(data.pumps)data.pumps.forEach(function(p){var m=ap(p.lat,p.lng,p.name||'',p.desc||'',p.type||'pumps',p.alt);var pt=pumps[pumps.length-1];if(pt&&p.type==='pumps'){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;pt.pumpDate=p.pumpDate||'';pt.pumpTime=p.pumpTime||'';pt.pumpDuration=p.pumpDuration||'';}cnt++;});
+      if(data.pumps)data.pumps.forEach(function(p){var m=ap(p.lat,p.lng,p.name||'',p.desc||'',p.type||'pumps',p.alt);var pt=pumps[pumps.length-1];if(pt&&p.type==='pumps'){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;pt.pumpDate=p.pumpDate||'';pt.pumpTime=p.pumpTime||'';pt.pumpDuration=p.pumpDuration||'';pt.pumpStatus=p.pumpStatus||'running';pt.lastMaintenance=p.lastMaintenance||'';}cnt++;});
       if(data.tanks)data.tanks.forEach(function(t){ap(t.lat,t.lng,t.name||'',t.desc||'','tank',t.alt);cnt++;});
       if(data.manholes)data.manholes.forEach(function(m){ap(m.lat,m.lng,m.name||'',m.desc||'','manhole',m.alt);cnt++;});
       if(data.waterlines)data.waterlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','waterline');cnt++;});
@@ -1846,7 +1885,7 @@ function clearAllData(){
 }
 function loadDataFromObject(data){
   if(data.subs)data.subs.forEach(function(s){ap(s.lat,s.lng,s.name,s.desc,'subscribers',s.alt,s.subId||'');var pt=subs[subs.length-1];if(pt){pt.phone=s.phone||'';pt.address=s.address||'';pt.photo=s.photo||null;pt.meterReading=s.meterReading||null;}});
-  if(data.pumps)data.pumps.forEach(function(p){var t=p.type||'pumps';var m=ap(p.lat,p.lng,p.name,p.desc,t,p.alt);if(t==='pumps'){var pt=pumps[pumps.length-1];if(pt){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;pt.pumpDate=p.pumpDate||'';pt.pumpTime=p.pumpTime||'';pt.pumpDuration=p.pumpDuration||'';}}});
+  if(data.pumps)data.pumps.forEach(function(p){var t=p.type||'pumps';var m=ap(p.lat,p.lng,p.name,p.desc,t,p.alt);if(t==='pumps'){var pt=pumps[pumps.length-1];if(pt){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;pt.pumpDate=p.pumpDate||'';pt.pumpTime=p.pumpTime||'';pt.pumpDuration=p.pumpDuration||'';pt.pumpStatus=p.pumpStatus||'running';pt.lastMaintenance=p.lastMaintenance||'';}}});
   if(data.tanks)data.tanks.forEach(function(t){ap(t.lat,t.lng,t.name||'',t.desc||'','tank',t.alt);});
   if(data.manholes)data.manholes.forEach(function(m){ap(m.lat,m.lng,m.name||'',m.desc||'','manhole',m.alt);});
   if(data.waterlines)data.waterlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','waterline');});
@@ -2073,6 +2112,11 @@ function showStats(){
   lineStats(sewerlines,'🟤','شبكة صرف صحي');
   lineStats(gravitylines,'🟣','مسارات الجباه');
   pointStats(pumps,'🏭','دور ضخ');
+  // Pump status summary
+  var pumpsOnly=pumps.filter(function(p){return !p.type||p.type==='pumps';});
+  var runningPumps=pumpsOnly.filter(function(p){return p.pumpStatus!=='stopped';}).length;
+  var stoppedPumps=pumpsOnly.length-runningPumps;
+  if(pumpsOnly.length)html+='<div style="margin-bottom:6px;padding:4px 8px;background:rgba(255,255,255,.03);border-radius:4px;font-size:11px">🟢 شغال: '+runningPumps+' | 🔴 متوقف: '+stoppedPumps+'</div>';
   // Per-pump per-capita calculation
   var pumpsOnly=pumps.filter(function(p){return !p.type||p.type==='pumps';});
   if(pumpsOnly.length){
@@ -2080,6 +2124,8 @@ function showStats(){
     pumpsOnly.forEach(function(p){
       html+='<div style="margin:6px 0;padding:8px;background:rgba(255,255,255,.05);border-radius:6px;border-right:3px solid #E65100">';
       html+='<b style="font-size:12px">🏭 '+p.name+'</b>';
+      if(p.pumpStatus==='running')html+=' <span style="color:#4CAF50;font-size:10px">🟢 شغال</span>';
+      else html+=' <span style="color:#ef5350;font-size:10px">🔴 متوقف</span>';
       if(p.province||p.village||p.neighborhood)html+='<br><span style="color:#90CAF9;font-size:10px">'+(p.province||'')+(p.village?' / '+p.village:'')+(p.neighborhood?' / '+p.neighborhood:'')+'</span>';
       if(p.pumpDate||p.pumpTime||p.pumpDuration){
         html+='<br><span style="color:#FFD54F;font-size:10px">⏱ ';
@@ -2232,8 +2278,11 @@ function locateMe(){
     function(pos){
       var lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
       placeMyMarker(lat,lng,acc>1000?12:17);
+      if(accCircle)MI.removeLayer(accCircle);
+      accCircle=L.circle([lat,lng],{radius:acc,color:'#42A5F5',fillColor:'#42A5F5',fillOpacity:0.08,weight:1,dashArray:'4,4'}).addTo(MI);
       if(acc<100)hideCrosshair();
-      tt('📍 ('+lat.toFixed(4)+', '+lng.toFixed(4)+') ±'+Math.round(acc)+' م','ok');
+      var q=acc<10?'ممتازة 🔵':acc<50?'جيدة 🟢':acc<200?'متوسطة 🟡':'ضعيفة 🔴';
+      tt('📍 ('+lat.toFixed(5)+', '+lng.toFixed(5)+') ±'+Math.round(acc)+' م ('+q+')','ok');
     },
     function(err){
       if(err.code===1){tt('⚠️ سماح بالموقع في إعدادات المتصفح','err');stopWatching();}
@@ -2246,6 +2295,7 @@ function locateMe(){
 function stopWatching(){
   if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}
   hideCrosshair();
+  if(accCircle){MI.removeLayer(accCircle);accCircle=null;}
   var el=document.getElementById('fabLocate');
   if(el){el.style.borderColor='#42A5F5';el.style.background='';}
 }
@@ -2260,6 +2310,10 @@ loadSavedData();
 renderSnapshots();
 var activeSnap=localStorage.getItem('wpm_active_snapshot');
 if(activeSnap){var el=document.getElementById('saveStatus');if(el)el.textContent='✓ آخر حفظ: '+activeSnap;}
+var lastSync=localStorage.getItem('wpm_last_sync');
+if(lastSync){var el2=document.getElementById('syncStatus');if(el2)el2.textContent='☁️ آخر مزامنة: '+new Date(lastSync).toLocaleString('ar-SA');}
+var autoSync=localStorage.getItem('wpm_auto_sync');
+if(autoSync==='1'){var el3=document.getElementById('chkAutoSync');if(el3)el3.checked=true;}
 hidel();
 // Diagnostic
 if(typeof L==='undefined')console.error('Leaflet L is undefined');
