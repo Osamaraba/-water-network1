@@ -102,7 +102,7 @@ body{font-family:Tahoma,'Segoe UI',sans-serif;background:#1a1a2e;color:#fff;over
 <div class="indicator" id="drawIndicator">✏️ اسحب على الخريطة لرسم الحي</div>
 
 <button class="fab" id="fabCenter" onclick="cc()" style="right:14px;bottom:128px" title="مركز الخريطة">📍</button>
-<button class="fab" onclick="locateMe()" style="right:14px;bottom:68px;border-color:#42A5F5" title="تحديد موقعي">🎯</button>
+<button class="fab" id="fabLocate" onclick="locateMe()" style="right:14px;bottom:68px;border-color:#42A5F5" title="تحديد موقعي">🎯</button>
 <button class="fab" onclick="toggleSidePanel()" style="right:66px;bottom:68px;border-color:#66BB6A;font-size:14px" id="sideToggle" title="طبقات">☰</button>
 
 <div class="side-panel" id="sidePanel">
@@ -382,6 +382,7 @@ if(typeof L==='undefined'){
 MI=L.map('map',{center:[32.3499,35.7483],zoom:13,zoomControl:false,attributionControl:false});
 var tileSources=[
   {name:'شارع',url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',maxZoom:19,attr:'© <a href=\"https://openstreetmap.org\">OSM</a>'},
+  {name:'مباني OSM',url:'https://tiles-{s}.openstreetmap.fr/hot/{z}/{x}/{y}.png',maxZoom:20,attr:'© OSM Humanitarian'},
   {name:'تضاريس ESRI',url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',maxZoom:19,attr:'ESRI Topo'},
   {name:'أقمار',url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',maxZoom:19,attr:'ESRI'}
 ];
@@ -2210,23 +2211,43 @@ function loadMyMarker(){
   var lat=localStorage.getItem('myLocLat'),lng=localStorage.getItem('myLocLng');
   if(lat&&lng)placeMyMarker(parseFloat(lat),parseFloat(lng),15);
 }
+var watchId=null;
 function locateMe(){
+  if(watchId!==null){
+    // Stop watching
+    navigator.geolocation.clearWatch(watchId);
+    watchId=null;
+    hideCrosshair();
+    document.getElementById('fabLocate').style.borderColor='#42A5F5';
+    document.getElementById('fabLocate').style.background='';
+    tt('⏹️ تم إيقاف تتبع الموقع','inf');
+    return;
+  }
   if(!navigator.geolocation){tt('الموقع غير مدعوم','err');return;}
-  tt('📍 جاري تحديد الموقع...','inf');
+  tt('📍 جاري تتبع الموقع... اضغط 🎯 مرة أخرى للإيقاف','inf');
   showCrosshair();
-  navigator.geolocation.getCurrentPosition(
+  document.getElementById('fabLocate').style.borderColor='#4CAF50';
+  document.getElementById('fabLocate').style.background='rgba(76,175,80,.2)';
+  watchId=navigator.geolocation.watchPosition(
     function(pos){
-      hideCrosshair();
       var lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
       placeMyMarker(lat,lng,acc>1000?12:17);
+      if(acc<100)hideCrosshair();
+      tt('📍 ('+lat.toFixed(4)+', '+lng.toFixed(4)+') ±'+Math.round(acc)+' م','ok');
     },
     function(err){
-      hideCrosshair();
-      if(err.code===1)tt('⚠️ سماح بالموقع في إعدادات المتصفح','err');
-      else tt('⚠️ تعذر تحديد الموقع. اسحب الخريطة وضع علامتك: اضغط مطولاً','err');
+      if(err.code===1){tt('⚠️ سماح بالموقع في إعدادات المتصفح','err');stopWatching();}
+      else if(err.code===2)tt('⚠️ تعذر تحديد الموقع. تأكد من تشغيل GPS','err');
+      else if(err.code===3)tt('⚠️ GPS لا يستجيب. جاري المحاولة مرة أخرى...','inf');
     },
-    {enableHighAccuracy:true,timeout:15000,maximumAge:60000}
+    {enableHighAccuracy:true,timeout:10000,maximumAge:5000}
   );
+}
+function stopWatching(){
+  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}
+  hideCrosshair();
+  var el=document.getElementById('fabLocate');
+  if(el){el.style.borderColor='#42A5F5';el.style.background='';}
 }
 
 // ===== SERVICE WORKER =====
