@@ -488,6 +488,14 @@ function hf(files){
       r.onload=function(e){
         var cnt=e.target.result;
         if(name.endsWith('.kmz')){
+          if(!window.JSZip){
+            tt('جاري تحميل مكتبة KMZ...','inf');
+            var js=document.createElement('script');
+            js.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+            js.onload=function(){hf([file]);};
+            document.body.appendChild(js);
+            return;
+          }
           try{
             JSZip.loadAsync(cnt).then(function(zip){
               var kf=zip.file('doc.kml');
