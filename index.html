@@ -1546,32 +1546,33 @@ function restoreData(data){
   return total;
 }
 function loadFromIndexedDB(){
-  // Try IndexedDB if localStorage was empty - with 3s timeout to prevent hanging
-  var timedOut=false;
-  var tmr=setTimeout(function(){timedOut=true;hidel();tt('💾 التحميل من التخزين استغرق وقتاً طويلاً','inf');},3000);
+  // Timeout covers the ENTIRE operation (dbOpen + transaction)
+  var done=false;
+  var tmr=setTimeout(function(){if(!done){done=true;hidel();tt('💾 التحميل من التخزين استغرق وقتاً طويلاً','inf');}},3000);
   tt('💾 جاري تحميل البيانات من التخزين...','inf');
+  function finish(){if(!done){done=true;clearTimeout(tmr);hidel();}}
   dbOpen().then(function(db){
-    if(timedOut)return;
-    clearTimeout(tmr);
+    if(done)return;
     try{
       var tx=db.transaction('main','readonly');
+      tx.onerror=function(){finish();};
       var req=tx.objectStore('main').get('networkData');
       req.onsuccess=function(){
-        if(timedOut)return;
+        if(done)return;
         if(req.result){
           var total=restoreData(req.result);
           if(total>0){
             localStorage.setItem('wpm_data',JSON.stringify(req.result));
             tt('💾 تم استعادة '+total+' عنصر من التخزين المحلي','ok');
-            hidel();
+            finish();
             return;
           }
         }
-        hidel();
+        finish();
       };
-      req.onerror=function(){if(timedOut)return;hidel();};
-    }catch(e){if(timedOut)return;hidel();}
-  }).catch(function(){if(timedOut)return;clearTimeout(tmr);hidel();});
+      req.onerror=function(){finish();};
+    }catch(e){finish();}
+  }).catch(function(){finish();});
 }
 
 // ===== ADD SUBSCRIBER VIA MAP CLICK =====
