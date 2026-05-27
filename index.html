@@ -533,6 +533,8 @@ function td(){
 
 // ===== FILE HANDLING =====
 function hf(files){
+  if(!window._importPending)window._importPending=0;
+  window._importPending+=files.length;
   var type=document.getElementById('importType').value;
   for(var i=0;i<files.length;i++){
     var f=files[i];
@@ -555,19 +557,27 @@ function hf(files){
             JSZip.loadAsync(cnt).then(function(zip){
               var kf=zip.file('doc.kml');
               if(!kf){zip.forEach(function(p,fl){if(p.endsWith('.kml'))kf=fl;});}
-              if(kf)kf.async('string').then(function(s){pk(s,itype);});
+              if(kf)kf.async('string').then(function(s){pk(s,itype);importDone();});
               else tt('لم يتم العثور على KML في KMZ','err');
             }).catch(function(){tt('خطأ في فتح KMZ','err');});
           }catch(ex){tt('خطأ في KMZ','err');}
-        }else if(name.endsWith('.kml')){pk(cnt,itype);}
-        else if(name.endsWith('.gpx')){pg(cnt,itype);}
-        else if(name.endsWith('.csv')){pc(cnt,itype);}
-        else if(name.endsWith('.json')){pj(cnt,itype);}
+        }else if(name.endsWith('.kml')){pk(cnt,itype);importDone();}
+        else if(name.endsWith('.gpx')){pg(cnt,itype);importDone();}
+        else if(name.endsWith('.csv')){pc(cnt,itype);importDone();}
+        else if(name.endsWith('.json')){pj(cnt,itype);importDone();}
         else{tt('صيغة غير مدعومة: '+name,'err');}
       };
       if(name.endsWith('.kmz'))r.readAsArrayBuffer(file);
       else r.readAsText(file);
     })(f,fn,impType);
+  }
+}
+function importDone(){
+  window._importPending--;
+  if(window._importPending<1){
+    saveData(); // immediate full save
+    syncToCloud(); // push to cloud
+    updateSyncStatus('☁️ تم حفظ البيانات في السحابة');
   }
 }
 
@@ -1363,9 +1373,9 @@ function pullFromCloud(){
       if(x.status!==200){tt('☁️ فشل السحب من السحابة ('+x.status+')','err');console.log('pullFromCloud status '+x.status);return;}
       try{
         var rows=JSON.parse(x.responseText);
-        if(!rows||!rows.length){return;}
+        if(!rows||!rows.length){tt('☁️ لا توجد بيانات في السحابة','inf');return;}
         var r=rows[0];
-        if(!r||!r.data||!r.date){return;}
+        if(!r||!r.data||!r.date){tt('☁️ بيانات السحابة فارغة','inf');return;}
         var local=localStorage.getItem('wpm_last_sync');
         if(local&&r.date<=local){return;}
         tt('☁️ تم تحديث البيانات من السحابة','ok');
@@ -1404,7 +1414,7 @@ function updateSyncStatus(msg){
 function loadSavedData(){
   try{
     var raw=localStorage.getItem('wpm_data');
-    if(!raw)return;
+    if(!raw)return 0;
     var data=JSON.parse(raw);
     var count=0;
     if(data.subs)data.subs.forEach(function(s){
@@ -2306,7 +2316,11 @@ if('serviceWorker'in navigator){
     reg.update();
   }).catch(function(){});
 }
-loadSavedData();
+var restored=loadSavedData();
+if(restored===0){
+  tt('☁️ جاري تحميل البيانات من السحابة...','inf');
+  pullFromCloud();
+}
 renderSnapshots();
 var activeSnap=localStorage.getItem('wpm_active_snapshot');
 if(activeSnap){var el=document.getElementById('saveStatus');if(el)el.textContent='✓ آخر حفظ: '+activeSnap;}
