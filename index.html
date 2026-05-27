@@ -1427,11 +1427,7 @@ function pullFromCloud(){
     x.send();
   }catch(e){console.log('pullFromCloud error',e)}
 }
-// Periodic pull from cloud (60s); push only on import or manual sync
-setTimeout(pullFromCloud,3000);
-setInterval(function(){
-  pullFromCloud();
-},60000);
+// Cloud sync only on manual request (sync button or import)
 
 function fullSync(){
   syncToCloud();
@@ -1525,14 +1521,11 @@ function loadFromIndexedDB(){
             return;
           }
         }
-        // IndexedDB also empty -> try cloud
-        tt('☁️ جاري تحميل البيانات من السحابة...','inf');
-        pullFromCloud();
         hidel();
       };
-      req.onerror=function(){if(timedOut)return;tt('☁️ جاري تحميل البيانات من السحابة...','inf');pullFromCloud();hidel();};
-    }catch(e){if(timedOut)return;tt('☁️ جاري تحميل البيانات من السحابة...','inf');pullFromCloud();hidel();}
-  }).catch(function(){if(timedOut)return;clearTimeout(tmr);tt('☁️ جاري تحميل البيانات من السحابة...','inf');pullFromCloud();hidel();});
+      req.onerror=function(){if(timedOut)return;hidel();};
+    }catch(e){if(timedOut)return;hidel();}
+  }).catch(function(){if(timedOut)return;clearTimeout(tmr);hidel();});
 }
 
 // ===== ADD SUBSCRIBER VIA MAP CLICK =====
