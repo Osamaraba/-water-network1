@@ -1504,13 +1504,18 @@ function restoreData(data){
   return total;
 }
 function loadFromIndexedDB(){
-  // Try IndexedDB if localStorage was empty
+  // Try IndexedDB if localStorage was empty - with 3s timeout to prevent hanging
+  var timedOut=false;
+  var tmr=setTimeout(function(){timedOut=true;hidel();tt('💾 التحميل من التخزين استغرق وقتاً طويلاً','inf');},3000);
   tt('💾 جاري تحميل البيانات من التخزين...','inf');
   dbOpen().then(function(db){
+    if(timedOut)return;
+    clearTimeout(tmr);
     try{
       var tx=db.transaction('main','readonly');
       var req=tx.objectStore('main').get('networkData');
       req.onsuccess=function(){
+        if(timedOut)return;
         if(req.result){
           var total=restoreData(req.result);
           if(total>0){
@@ -1525,9 +1530,9 @@ function loadFromIndexedDB(){
         pullFromCloud();
         hidel();
       };
-      req.onerror=function(){tt('☁️ جاري تحميل البيانات من السحابة...','inf');pullFromCloud();hidel();};
-    }catch(e){tt('☁️ جاري تحميل البيانات من السحابة...','inf');pullFromCloud();hidel();}
-  }).catch(function(){tt('☁️ جاري تحميل البيانات من السحابة...','inf');pullFromCloud();hidel();});
+      req.onerror=function(){if(timedOut)return;tt('☁️ جاري تحميل البيانات من السحابة...','inf');pullFromCloud();hidel();};
+    }catch(e){if(timedOut)return;tt('☁️ جاري تحميل البيانات من السحابة...','inf');pullFromCloud();hidel();}
+  }).catch(function(){if(timedOut)return;clearTimeout(tmr);tt('☁️ جاري تحميل البيانات من السحابة...','inf');pullFromCloud();hidel();});
 }
 
 // ===== ADD SUBSCRIBER VIA MAP CLICK =====
@@ -2395,6 +2400,8 @@ if(!restored){
 } else {
   hidel();
 }
+// Safety: force hide loading after 5s even if async ops hang
+setTimeout(hidel,5000);
 renderSnapshots();
 var activeSnap=localStorage.getItem('wpm_active_snapshot');
 if(activeSnap){var el=document.getElementById('saveStatus');if(el)el.textContent='✓ آخر حفظ: '+activeSnap;}
