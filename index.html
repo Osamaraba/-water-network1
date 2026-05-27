@@ -1546,10 +1546,8 @@ function restoreData(data){
   return total;
 }
 function loadFromIndexedDB(){
-  // Timeout covers the ENTIRE operation (dbOpen + transaction)
   var done=false;
-  var tmr=setTimeout(function(){if(!done){done=true;hidel();tt('💾 التحميل من التخزين استغرق وقتاً طويلاً','inf');}},3000);
-  tt('💾 جاري تحميل البيانات من التخزين...','inf');
+  var tmr=setTimeout(function(){if(!done){done=true;hidel();}},3000);
   function finish(){if(!done){done=true;clearTimeout(tmr);hidel();}}
   dbOpen().then(function(db){
     if(done)return;
@@ -1563,7 +1561,6 @@ function loadFromIndexedDB(){
           var total=restoreData(req.result);
           if(total>0){
             localStorage.setItem('wpm_data',JSON.stringify(req.result));
-            tt('💾 تم استعادة '+total+' عنصر من التخزين المحلي','ok');
             finish();
             return;
           }
