@@ -549,35 +549,48 @@ function hf(files){
             tt('جاري تحميل مكتبة KMZ...','inf');
             var js=document.createElement('script');
             js.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-            js.onload=function(){hf([file]);};
+            // Setup: when JSZip loads, read and process this same file
+            js.onload=function(){
+              var r2=new FileReader();
+              r2.onload=function(e2){
+                var cnt2=e2.target.result;
+                processKmzContent(cnt2,itype);
+              };
+              r2.readAsArrayBuffer(file);
+            };
             document.body.appendChild(js);
             return;
           }
-          try{
-            JSZip.loadAsync(cnt).then(function(zip){
-              var kf=zip.file('doc.kml');
-              if(!kf){zip.forEach(function(p,fl){if(p.endsWith('.kml'))kf=fl;});}
-              if(kf)kf.async('string').then(function(s){pk(s,itype);importDone();});
-              else tt('لم يتم العثور على KML في KMZ','err');
-            }).catch(function(){tt('خطأ في فتح KMZ','err');});
-          }catch(ex){tt('خطأ في KMZ','err');}
+          processKmzContent(cnt,itype);
         }else if(name.endsWith('.kml')){pk(cnt,itype);importDone();}
         else if(name.endsWith('.gpx')){pg(cnt,itype);importDone();}
         else if(name.endsWith('.csv')){pc(cnt,itype);importDone();}
         else if(name.endsWith('.json')){pj(cnt,itype);importDone();}
-        else{tt('صيغة غير مدعومة: '+name,'err');}
+        else{tt('صيغة غير مدعومة: '+name,'err');importDone();}
       };
       if(name.endsWith('.kmz'))r.readAsArrayBuffer(file);
       else r.readAsText(file);
     })(f,fn,impType);
   }
 }
+function processKmzContent(buf,itype){
+  try{
+    JSZip.loadAsync(buf).then(function(zip){
+      var kf=zip.file('doc.kml');
+      if(!kf){zip.forEach(function(p,fl){if(p.endsWith('.kml'))kf=fl;});}
+      if(kf)kf.async('string').then(function(s){pk(s,itype);importDone();});
+      else {tt('لم يتم العثور على KML في KMZ','err');importDone();}
+    }).catch(function(){tt('خطأ في فتح KMZ','err');importDone();});
+  }catch(ex){tt('خطأ في KMZ','err');importDone();}
+}
 function importDone(){
   window._importPending--;
   if(window._importPending<1){
-    saveData(); // immediate full save
-    syncToCloud(); // push to cloud
-    updateSyncStatus('☁️ تم حفظ البيانات في السحابة');
+    window._importPending=0;
+    if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
+    var cnt=subs.length+pumps.length+tanks.length+manholes.length+waterlines.length+sewerlines.length+gravitylines.length+complaints.length;
+    tt('تم استيراد '+(cnt||'')+' نقطة وحفظها ☁️','ok');
+    saveData();
   }
 }
 
@@ -1378,6 +1391,10 @@ function pullFromCloud(){
         if(!r||!r.data||!r.date){tt('☁️ بيانات السحابة فارغة','inf');return;}
         var local=localStorage.getItem('wpm_last_sync');
         if(local&&r.date<=local){return;}
+        // Only reload if cloud data is >5s newer (prevents reload loop after sync)
+        var cloudMs=new Date(r.date).getTime();
+        var localMs=local?new Date(local).getTime():0;
+        if(local&&cloudMs-localMs<5000){return;}
         tt('☁️ تم تحديث البيانات من السحابة','ok');
         updateSyncStatus('☁️ آخر سحب: '+new Date(r.date).toLocaleString('ar-SA'));
         localStorage.setItem('wpm_data',JSON.stringify(r.data));
