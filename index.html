@@ -1325,12 +1325,11 @@ function saveData(){
       }
     });
     localStorage.setItem('wpm_data',JSON.stringify(data));
-    setTimeout(syncToCloud,100);
   }catch(e){tt('⚠️ فشل الحفظ: سعة التخزين ممتلئة','err');}
 }
 function autoSave(){
   if(saveTimer)clearTimeout(saveTimer);
-  saveTimer=setTimeout(saveData,300);
+  saveTimer=setTimeout(saveData,1000);
 }
 
 // ===== SYNC VIA SUPABASE (internet sync) =====
@@ -1406,9 +1405,12 @@ function pullFromCloud(){
     x.send();
   }catch(e){console.log('pullFromCloud error',e)}
 }
-// Pull on load, then every 10 seconds; push on every save
-setTimeout(pullFromCloud,1000);
-setInterval(pullFromCloud,10000);
+// Periodic sync - check every 60s
+setTimeout(pullFromCloud,3000);
+setInterval(function(){
+  pullFromCloud();
+  if(localStorage.getItem('wpm_auto_sync')==='1')syncToCloud();
+},60000);
 
 function fullSync(){
   syncToCloud();
