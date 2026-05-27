@@ -1300,8 +1300,21 @@ function cc(){
   else MI.setView([32.3499,35.7483],13);
 }
 
-// ===== PERSISTENT SAVE/LOAD =====
+// ===== PERSISTENT SAVE/LOAD (IndexedDB + localStorage fallback) =====
 var saveTimer=null;
+var _db=null;
+function dbOpen(){
+  return new Promise(function(resolve,reject){
+    if(_db){resolve(_db);return;}
+    var req=indexedDB.open('WaterNetwork2',1);
+    req.onupgradeneeded=function(e){
+      var db=e.target.result;
+      if(!db.objectStoreNames.contains('main'))db.createObjectStore('main');
+    };
+    req.onsuccess=function(e){_db=e.target.result;resolve(_db);};
+    req.onerror=function(e){reject(e.target.error);};
+  });
+}
 function saveData(){
   try{
     var data={
@@ -1325,8 +1338,15 @@ function saveData(){
         }
       }
     });
-    localStorage.setItem('wpm_data',JSON.stringify(data));
-  }catch(e){tt('⚠️ فشل الحفظ: سعة التخزين ممتلئة','err');}
+    // Write to IndexedDB (primary) and localStorage (fallback + backwards compat)
+    dbOpen().then(function(db){
+      try{
+        var tx=db.transaction('main','readwrite');
+        tx.objectStore('main').put(data,'networkData');
+      }catch(e){}
+    }).catch(function(){});
+    try{localStorage.setItem('wpm_data',JSON.stringify(data));}catch(e2){}
+  }catch(e){}
 }
 function autoSave(){
   if(saveTimer)clearTimeout(saveTimer);
@@ -1435,47 +1455,78 @@ function loadSavedData(){
     var raw=localStorage.getItem('wpm_data');
     if(!raw)return 0;
     var data=JSON.parse(raw);
-    var count=0;
-    if(data.subs)data.subs.forEach(function(s){
-      var m=ap(s.lat,s.lng,s.name,s.desc,'subscribers',s.alt,s.subId||'');
-      var pt=subs[subs.length-1];if(pt){pt.phone=s.phone;pt.address=s.address;pt.alt=s.alt;pt.subId=s.subId||'';pt.photo=s.photo||null;pt.meterReading=s.meterReading||null;}
-      count++;
-    });
-    if(data.pumps)data.pumps.forEach(function(p){
-      var t=p.type||'pumps';
-      var m=ap(p.lat,p.lng,p.name,p.desc,t,p.alt);
-      if(t==='pumps'){
-        var pt=pumps[pumps.length-1];
-        if(pt){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;pt.pumpDate=p.pumpDate||'';pt.pumpTime=p.pumpTime||'';pt.pumpDuration=p.pumpDuration||'';pt.pumpStatus=p.pumpStatus||'running';pt.lastMaintenance=p.lastMaintenance||'';}
-      }
-    });
-    renderPumpPolygons();
-    if(data.tanks)data.tanks.forEach(function(t){ap(t.lat,t.lng,t.name||'',t.desc||'','tank',t.alt);});
-    if(data.manholes)data.manholes.forEach(function(m){ap(m.lat,m.lng,m.name||'',m.desc||'','manhole',m.alt);});
-    if(data.waterlines)data.waterlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','waterline');});
-    if(data.sewerlines)data.sewerlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','sewerline');});
-    if(data.gravitylines)data.gravitylines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','gravityline');});
-    if(data.complaints)data.complaints.forEach(function(c){ap(c.lat,c.lng,c.name||'',c.desc||'','complaint',c.alt);});
-    if(data.hoods)data.hoods.forEach(function(h){
-      if(!h.coords||h.coords.length<3)return;
-      var latlngs=h.coords.map(function(c){return [c[0],c[1]];});
-      var poly=L.polygon(latlngs,{color:h.color||'#3366FF',fillColor:h.color||'#3366FF',fillOpacity:0.12,weight:3});
-      poly._hoodId=h.id;
-      DI.addLayer(poly);
-      var center=poly.getBounds().getCenter();
-      var label=L.marker(center,{
-        icon:L.divIcon({className:'',html:'<div class="neighborhood-label">'+h.name+'</div>',iconSize:[0,0],iconAnchor:[0,0]}),
-        zIndexOffset:1000
-      });
-      label._hoodId=h.id;
-      DI.addLayer(label);
-      hoods.push({id:h.id,name:h.name,color:h.color||'#3366FF',layer:poly,label:label});
-    });
-    if(count>0){cc();tt('تم استعادة '+count+' مشترك من الحفظ التلقائي','ok');}
-    ui();
-    var total=count+data.pumps.length+data.tanks.length+data.manholes.length+data.waterlines.length+data.sewerlines.length+data.gravitylines.length+data.complaints.length;
-    return total;
+    return restoreData(data);
   }catch(e){return 0;}
+}
+// Restore all map data from a parsed object; returns total count
+function restoreData(data){
+  if(!data)return 0;
+  var count=0;
+  if(data.subs)data.subs.forEach(function(s){
+    var m=ap(s.lat,s.lng,s.name,s.desc,'subscribers',s.alt,s.subId||'');
+    var pt=subs[subs.length-1];if(pt){pt.phone=s.phone;pt.address=s.address;pt.alt=s.alt;pt.subId=s.subId||'';pt.photo=s.photo||null;pt.meterReading=s.meterReading||null;}
+    count++;
+  });
+  if(data.pumps)data.pumps.forEach(function(p){
+    var t=p.type||'pumps';
+    var m=ap(p.lat,p.lng,p.name,p.desc,t,p.alt);
+    if(t==='pumps'){
+      var pt=pumps[pumps.length-1];
+      if(pt){pt.capacity=p.capacity||'';pt.province=p.province||'';pt.village=p.village||'';pt.neighborhood=p.neighborhood||'';pt.polygon=p.polygon||null;pt.pumpDate=p.pumpDate||'';pt.pumpTime=p.pumpTime||'';pt.pumpDuration=p.pumpDuration||'';pt.pumpStatus=p.pumpStatus||'running';pt.lastMaintenance=p.lastMaintenance||'';}
+    }
+  });
+  renderPumpPolygons();
+  if(data.tanks)data.tanks.forEach(function(t){ap(t.lat,t.lng,t.name||'',t.desc||'','tank',t.alt);});
+  if(data.manholes)data.manholes.forEach(function(m){ap(m.lat,m.lng,m.name||'',m.desc||'','manhole',m.alt);});
+  if(data.waterlines)data.waterlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','waterline');});
+  if(data.sewerlines)data.sewerlines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','sewerline');});
+  if(data.gravitylines)data.gravitylines.forEach(function(l){addLine(l.coords,l.name||'',l.diameter,l.desc||'','gravityline');});
+  if(data.complaints)data.complaints.forEach(function(c){ap(c.lat,c.lng,c.name||'',c.desc||'','complaint',c.alt);});
+  if(data.hoods)data.hoods.forEach(function(h){
+    if(!h.coords||h.coords.length<3)return;
+    var latlngs=h.coords.map(function(c){return [c[0],c[1]];});
+    var poly=L.polygon(latlngs,{color:h.color||'#3366FF',fillColor:h.color||'#3366FF',fillOpacity:0.12,weight:3});
+    poly._hoodId=h.id;
+    DI.addLayer(poly);
+    var center=poly.getBounds().getCenter();
+    var label=L.marker(center,{
+      icon:L.divIcon({className:'',html:'<div class="neighborhood-label">'+h.name+'</div>',iconSize:[0,0],iconAnchor:[0,0]}),
+      zIndexOffset:1000
+    });
+    label._hoodId=h.id;
+    DI.addLayer(label);
+    hoods.push({id:h.id,name:h.name,color:h.color||'#3366FF',layer:poly,label:label});
+  });
+  if(count>0){cc();tt('تم استعادة '+count+' مشترك من الحفظ التلقائي','ok');}
+  ui();
+  var total=count+(data.pumps?data.pumps.length:0)+(data.tanks?data.tanks.length:0)+(data.manholes?data.manholes.length:0)+(data.waterlines?data.waterlines.length:0)+(data.sewerlines?data.sewerlines.length:0)+(data.gravitylines?data.gravitylines.length:0)+(data.complaints?data.complaints.length:0);
+  return total;
+}
+function loadFromIndexedDB(){
+  // Try IndexedDB if localStorage was empty
+  tt('💾 جاري تحميل البيانات من التخزين...','inf');
+  dbOpen().then(function(db){
+    try{
+      var tx=db.transaction('main','readonly');
+      var req=tx.objectStore('main').get('networkData');
+      req.onsuccess=function(){
+        if(req.result){
+          var total=restoreData(req.result);
+          if(total>0){
+            localStorage.setItem('wpm_data',JSON.stringify(req.result));
+            tt('💾 تم استعادة '+total+' عنصر من التخزين المحلي','ok');
+            hidel();
+            return;
+          }
+        }
+        // IndexedDB also empty -> try cloud
+        tt('☁️ جاري تحميل البيانات من السحابة...','inf');
+        pullFromCloud();
+        hidel();
+      };
+      req.onerror=function(){tt('☁️ جاري تحميل البيانات من السحابة...','inf');pullFromCloud();hidel();};
+    }catch(e){tt('☁️ جاري تحميل البيانات من السحابة...','inf');pullFromCloud();hidel();}
+  }).catch(function(){tt('☁️ جاري تحميل البيانات من السحابة...','inf');pullFromCloud();hidel();});
 }
 
 // ===== ADD SUBSCRIBER VIA MAP CLICK =====
@@ -2339,8 +2390,9 @@ if('serviceWorker'in navigator){
 }
 var restored=loadSavedData();
 if(!restored){
-  tt('☁️ جاري تحميل البيانات من السحابة...','inf');
-  pullFromCloud();
+  loadFromIndexedDB();
+} else {
+  hidel();
 }
 renderSnapshots();
 var activeSnap=localStorage.getItem('wpm_active_snapshot');
@@ -2349,7 +2401,6 @@ var lastSync=localStorage.getItem('wpm_last_sync');
 if(lastSync){var el2=document.getElementById('syncStatus');if(el2)el2.textContent='☁️ آخر مزامنة: '+new Date(lastSync).toLocaleString('ar-SA');}
 var autoSync=localStorage.getItem('wpm_auto_sync');
 if(autoSync==='1'){var el3=document.getElementById('chkAutoSync');if(el3)el3.checked=true;}
-hidel();
 // Diagnostic
 if(typeof L==='undefined')console.error('Leaflet L is undefined');
 if(!MI)console.error('Map MI is undefined');
