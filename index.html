@@ -2436,9 +2436,17 @@ if('serviceWorker'in navigator){
 }
 var restored=loadSavedData();
 if(!restored){
-  loadFromIndexedDB();
+  // First visit check: skip IndexedDB if never saved before
+  var visited=localStorage.getItem('wpm_visited');
+  if(visited){
+    loadFromIndexedDB();
+  } else {
+    hidel();
+    localStorage.setItem('wpm_visited','1');
+  }
 } else {
   hidel();
+  localStorage.setItem('wpm_visited','1');
 }
 // Safety: force hide loading after 5s even if async ops hang
 setTimeout(hidel,5000);
