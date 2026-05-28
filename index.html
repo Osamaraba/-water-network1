@@ -2440,9 +2440,18 @@ function stopWatching(){
   if(el){el.style.borderColor='#42A5F5';el.style.background='';}
 }
 
-// ===== WORKER LOCATION TRACKING =====
+// ===== WORKER LOCATION TRACKING (stored in wpm_data with unique numeric ID) =====
 var workerLayer=null;
 var workerTimer=null;
+var _workerId=null;
+function getWorkerId(){
+  if(_workerId)return _workerId;
+  var stored=localStorage.getItem('wpm_worker_id');
+  if(stored){_workerId=parseInt(stored);return _workerId;}
+  _workerId=Math.floor(Math.random()*999000)+1000;
+  localStorage.setItem('wpm_worker_id',_workerId.toString());
+  return _workerId;
+}
 function registerWorker(){
   var name=document.getElementById('workerName').value.trim();
   var car=document.getElementById('workerCar').value.trim();
@@ -2457,7 +2466,6 @@ function registerWorker(){
 }
 function startWorkerTracking(){
   if(!navigator.geolocation){tt('⚠️ الموقع غير مدعوم على هذا الجهاز','err');return;}
-  // Send location immediately, then every 30s
   sendLocation();
   if(workerTimer)clearInterval(workerTimer);
   workerTimer=setInterval(sendLocation,30000);
@@ -2466,11 +2474,13 @@ function sendLocation(){
   var name=localStorage.getItem('wpm_worker_name');
   if(!name)return;
   var car=localStorage.getItem('wpm_worker_car');
+  var wid=getWorkerId();
   navigator.geolocation.getCurrentPosition(function(pos){
     var lat=pos.coords.latitude,lng=pos.coords.longitude;
-    var body=JSON.stringify({name:name,car:car,lat:lat,lng:lng,updated_at:new Date().toISOString()});
+    var now=new Date().toISOString();
+    var body=JSON.stringify({id:wid,date:now,data:{name:name,car:car,lat:lat,lng:lng}});
     var x=new XMLHttpRequest();
-    x.open('POST',SUPABASE_URL+'/rest/v1/wpm_locations',true);
+    x.open('PUT',SUPABASE_URL+'/rest/v1/wpm_data?id=eq.'+wid,true);
     x.setRequestHeader('Content-Type','application/json');
     x.setRequestHeader('apikey',SUPABASE_KEY);
     x.setRequestHeader('Authorization','Bearer '+SUPABASE_KEY);
@@ -2478,7 +2488,14 @@ function sendLocation(){
     x.onerror=function(){};
     x.onload=function(){
       if(x.status===404){
-        tt('⚠️ جدول wpm_locations غير موجود. أنشئه في Supabase: CREATE TABLE wpm_locations (id SERIAL PRIMARY KEY, name TEXT, car TEXT, lat DOUBLE PRECISION, lng DOUBLE PRECISION, updated_at TIMESTAMPTZ DEFAULT NOW());','err');
+        // Row doesn't exist → INSERT
+        var x2=new XMLHttpRequest();
+        x2.open('POST',SUPABASE_URL+'/rest/v1/wpm_data',true);
+        x2.setRequestHeader('Content-Type','application/json');
+        x2.setRequestHeader('apikey',SUPABASE_KEY);
+        x2.setRequestHeader('Authorization','Bearer '+SUPABASE_KEY);
+        x2.setRequestHeader('Prefer','return=minimal');
+        x2.send(body);
       }
     };
     x.send(body);
@@ -2487,25 +2504,24 @@ function sendLocation(){
 function loadWorkerLocations(){
   if(!workerLayer){workerLayer=L.layerGroup().addTo(MI);}
   var x=new XMLHttpRequest();
-  x.open('GET',SUPABASE_URL+'/rest/v1/wpm_locations?order=updated_at.desc',true);
+  x.open('GET',SUPABASE_URL+'/rest/v1/wpm_data?select=id,date,data&id=gt.1&order=date.desc',true);
   x.setRequestHeader('apikey',SUPABASE_KEY);
   x.setRequestHeader('Authorization','Bearer '+SUPABASE_KEY);
   x.onload=function(){
-    if(x.status===404)return;
     if(x.status!==200)return;
     try{
       var rows=JSON.parse(x.responseText);
       if(!rows||!rows.length)return;
       workerLayer.clearLayers();
       rows.forEach(function(r){
-        if(!r.lat||!r.lng)return;
+        if(!r.data||!r.data.lat||!r.data.lng)return;
         var icon=L.divIcon({
           className:'',
-          html:'<div style="background:#1565C0;color:#fff;border-radius:20px;padding:2px 8px;font-size:10px;border:2px solid #64B5F6;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.4)">👤 '+r.name+'<br><span style="font-size:8px">🚗 '+r.car+'</span></div>',
-          iconSize:[0,0],iconAnchor:[20,10]
+          html:'<div style="background:#1565C0;color:#fff;border-radius:20px;padding:3px 10px;font-size:10px;border:2px solid #64B5F6;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.5)">👤 '+r.data.name+'<br><span style="font-size:8px">🚗 '+r.data.car+'</span></div>',
+          iconSize:[0,0],iconAnchor:[20,12]
         });
-        var m=L.marker([r.lat,r.lng],{icon:icon}).addTo(workerLayer);
-        m.bindPopup('<b>'+r.name+'</b><br>🚗 '+r.car+'<br>🕐 '+new Date(r.updated_at).toLocaleString('ar-SA'));
+        var m=L.marker([r.data.lat,r.data.lng],{icon:icon}).addTo(workerLayer);
+        m.bindPopup('<b>'+r.data.name+'</b><br>🚗 '+r.data.car+'<br>🕐 '+new Date(r.date).toLocaleString('ar-SA'));
       });
     }catch(e){}
   };
@@ -2519,10 +2535,9 @@ function toggleWorkersLayer(){
   }
 }
 function clearOldLocations(){
-  // Delete locations older than 24 hours
   var yesterday=new Date(Date.now()-86400000).toISOString();
   var x=new XMLHttpRequest();
-  x.open('DELETE',SUPABASE_URL+'/rest/v1/wpm_locations?updated_at=lt.'+yesterday,true);
+  x.open('DELETE',SUPABASE_URL+'/rest/v1/wpm_data?and=(id.gt.1,date.lt.'+yesterday+')',true);
   x.setRequestHeader('apikey',SUPABASE_KEY);
   x.setRequestHeader('Authorization','Bearer '+SUPABASE_KEY);
   x.send();
