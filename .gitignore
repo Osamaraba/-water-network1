@@ -30,3 +30,5 @@ result.txt
 err*.log
 server*.log
 new_server*.log
+deploy_render.py
+*.txt
