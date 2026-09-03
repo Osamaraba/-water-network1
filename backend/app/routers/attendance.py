@@ -72,7 +72,9 @@ async def check_in(
     )
     existing = result.scalar_one_or_none()
     if existing:
-        raise HTTPException(status_code=400, detail="Already checked in today")
+        # Auto checkout the old record then allow new check-in
+        existing.check_out_time = datetime.utcnow()
+        existing.check_out_location = existing.check_in_location
     
     # ===== التحقق 1: الهوية =====
     identity_verified = True
@@ -105,7 +107,7 @@ async def check_in(
         location_verified = True
     
     # ===== التحقق 3: دقة GPS =====
-    if req.accuracy and req.accuracy > 100:  # More than 100 meters accuracy
+    if req.accuracy and req.accuracy > 500:  # More than 500 meters accuracy
         raise HTTPException(
             status_code=400,
             detail="GPS accuracy is too low. Please enable high accuracy location."
