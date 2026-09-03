@@ -1,0 +1,46 @@
+=====================================
+إرشادات النشر الآمن - بدون API Keys
+=====================================
+
+=== الطريقة الآمنة للنشر على Render ===
+
+1. ادخل Render Dashboard:
+   https://dashboard.render.com
+
+2. اذهب لـ Service > Environment Variables
+
+3. أضف هذه المتغيرات:
+
+   JWT_SECRET_KEY = (اضغط Generate Value)
+   ENVIRONMENT = production
+   CORS_ORIGINS = https://yarmouk-water-api.onrender.com
+   PYTHON_VERSION = 3.11.0
+
+4. اضغط Save وDeploy
+
+=== للتحديث مستقبلاً ===
+
+# 1. عدّل الكود
+# 2. احفظ التغييرات
+# 3. شغّل:
+   cd D:\yarmouk_water_management_pro
+   git add -A
+   git commit -m "تحديث"
+   git push origin main
+
+# 4. Render سيعيد البناء تلقائياً
+
+=== ملاحظات أمنية ===
+
+- لا تحفظ API Keys في الكود
+- لا تحفظ كلمات المرور في .env
+- استخدم Environment Variables دائماً
+- اجعل الـ repo private
+- غيّر JWT_SECRET_KEY كل فترة
+
+=== للتشغيل المحلي ===
+
+cd D:\yarmouk_water_management_pro\backend
+copy .env.example .env
+# عدّل .env بكلمات مرورك
+python -m uvicorn app.main:app --reload

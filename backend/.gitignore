@@ -1,32 +1,33 @@
-# Environment & Secrets
+# ===== Environment =====
 .env
-*.env
-.env.*
-!.env.example
+.env.local
+.env.production
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-.venv/
-env/
-.venv
-pip-log.txt
-
-# Database
+# ===== Database =====
 *.db
-*.sqlite
 *.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
 
-# IDE
+# ===== Python =====
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# ===== Logs =====
+*.log
+
+# ===== IDE =====
 .idea/
 .vscode/
-*.swp
-.DS_Store
 
-# Logs
-*.log
-logs/
+# ===== OS =====
+.DS_Store
+Thumbs.db

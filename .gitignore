@@ -1,34 +1,90 @@
+# ===== Python =====
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.env
-*.db
-*.sqlite3
-*.log
+.Python
 *.egg-info/
 dist/
 build/
+.eggs/
+
+# ===== Virtual Environment =====
 .venv/
 venv/
-node_modules/
-.dart_tool/
-build/
-.packages
-*.iml
+ENV/
+
+# ===== Environment Variables (SECRETS) =====
+.env
+.env.local
+.env.production
+.env.staging
+
+# ===== Database =====
+*.db
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ===== Logs =====
+*.log
+logs/
+stderr.log
+stdout.log
+server*.log
+err*.log
+new_server*.log
+
+# ===== IDE =====
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
+
+# ===== OS =====
 .DS_Store
 Thumbs.db
+Desktop.ini
+
+# ===== Flutter/Mobile =====
+mobile_app/build/
+mobile_app/.dart_tool/
+mobile_app/.packages
+mobile_app/pubspec.lock
+*.iml
+
+# ===== Node =====
+node_modules/
+
+# ===== Backup & Output =====
 backups/
 output/
-*.xlsx
-*.xls
+result*.txt
 login.json
 login.out
-result.txt
-err*.log
-server*.log
-new_server*.log
+
+# ===== Sensitive Scripts (DO NOT COMMIT) =====
 deploy_render.py
-*.txt
+deploy_*.py
+*SECRETS*
+*secrets*
+*API_KEY*
+*api_key*
+
+# ===== Data Files =====
+*.xlsx
+*.xls
+*.csv
+
+# ===== Build Artifacts =====
+*.apk
+*.aab
+*.ipa
+
+# ===== Temporary =====
+temp/
+tmp/
+*.tmp
+*.bak
