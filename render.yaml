@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: yarmouk-water-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: yarmouk-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: PYTHON_VERSION
+        value: "3.11"
+
+databases:
+  - name: yarmouk-db
+    plan: free
+    databaseName: yarmouk_water
+    ipAllowList: []
